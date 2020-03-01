@@ -1,5 +1,4 @@
-;; TODO: temporary name
-(in-package #:scheme)
+(in-package #:airship-scheme)
 
 ;; TODO: Stub
 (defun scheme-read (stream)

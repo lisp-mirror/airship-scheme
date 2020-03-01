@@ -1,7 +1,6 @@
 (in-package #:cl)
 
-;; TODO: Temporary name
-(asdf:defsystem #:scheme
+(asdf:defsystem #:airship-scheme
   :serial t
   :description "A new r7rs Scheme implementation, designed to be run within a Common Lisp environment."
   :author "Michael Babich"
