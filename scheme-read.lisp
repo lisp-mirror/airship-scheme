@@ -1,10 +1,13 @@
-(in-package #:airship-scheme)
+(cl:in-package #:airship-scheme)
 
+;;; Symbols are read into this package.
+(defpackage #:scheme
+  (:use))
+
+;; TODO: Support combining :repeat with :range
+;;
 ;; TODO: Stub
-(defun scheme-read (stream)
-  ;; Tokenizer
-  ;;
-  ;; TODO: Support combining :repeat with :range
+(defun tokenize (stream)
   (loop :for match := (read-case (stream c)
                         ;; Note: digit is technically a "subtype" of
                         ;; alphanumeric but at the moment the
@@ -15,3 +18,48 @@
                         ((:or #\Space #\Newline #\Tab) (format t "~S~%" c) (cons :whitespace c)))
         :while match
         :collect match))
+
+;;; Invert case for CL interoperability.
+(define-function (invert-case :return simple-string) ((simple-string simple-string))
+  (map 'simple-string
+       (lambda (c)
+         (cond ((upper-case-p c) (char-downcase c))
+               ((lower-case-p c) (char-upcase c))
+               (t c)))
+       simple-string))
+
+(defun parse (tokens &optional literal?)
+  (loop :with tokens* := tokens
+        :for token := (car tokens*)
+        :with literal? := literal?
+        ;; TODO: balance parens
+        :until (or (endp tokens*) (eql token #\)))
+        :collect (if (eql token #\()
+                     (multiple-value-bind (result rest)
+                         (parse (cdr tokens*) literal?)
+                       (prog1 result
+                         (setf tokens* rest)))
+                     (prog1
+                         (etypecase token
+                           (character token)
+                           (string (let ((scheme-symbol (intern (invert-case token) 'scheme)))
+                                     (if literal?
+                                         scheme-symbol
+                                         (cons :variable scheme-symbol)))))
+                       (setf tokens* (cdr tokens*))))
+          :into parse-tree
+        :finally
+           ;; TODO: check for balanced parens
+           (if t
+               (return parse-tree)
+               (error "Unmatched parentheses"))))
+
+;;; TODO: stub
+(defun simplify (parse-tree)
+  parse-tree)
+
+;; TODO: Stub
+(defun scheme-read (stream)
+  (let* ((tokens (tokenize stream))
+         (parse-tree (parse tokens)))
+    (simplify parse-tree)))
