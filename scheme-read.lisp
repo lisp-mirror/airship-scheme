@@ -4,18 +4,14 @@
 (defpackage #:scheme
   (:use))
 
-;; TODO: Support combining :repeat with :range
-;;
 ;; TODO: Stub
 (defun tokenize (stream)
-  (loop :for match := (read-case (stream c)
-                        ;; Note: digit is technically a "subtype" of
-                        ;; alphanumeric but at the moment the
-                        ;; classification is simple conses.
-                        ((:range #\0 #\9) (format t "~S~%" c) (cons :digit c))
-                        ((:range #\A #\Z) (format t "~S~%" c) (cons :alphanumeric c))
-                        ((:range #\a #\z) (format t "~S~%" c) (cons :alphanumeric c))
-                        ((:or #\Space #\Newline #\Tab) (format t "~S~%" c) (cons :whitespace c)))
+  (loop :for match := (read-case (stream x)
+                        ((:range #\0 #\9) (format t "~S~%" x) (cons :digit x))
+                        ((:range #\A #\Z) (format t "~S~%" x) (cons :letter x))
+                        ((:range #\a #\z) (format t "~S~%" x) (cons :letter x))
+                        ((:or #\Space #\Newline #\Tab) (format t "~S~%" x) (cons :whitespace x))
+                        ((:or #\( #\)) (format t "~S~%" x) (cons :parens x)))
         :while match
         :collect match))
 
