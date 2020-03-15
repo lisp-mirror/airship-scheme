@@ -120,18 +120,44 @@ procedure.
 Differing conventions
 ---------------------
 
-In Common Lisp, end-of-line comments start with `;`, and comments on
-their own line start with `;;` if not at the top level (i.e. if
-indented) and with `;;;` or `;;;;` if at the top level (i.e. if not
-indented). Generally, `;;;;` is used for file headers and `;;;`
-elsewhere, but not every Common Lisp project uses `;;;;`. Scheme
-mostly shares the same styles for s-expressions and comments as Common
-Lisp, but the common Scheme styles only distinguish between `;` for
-end-of-line comments and `;;` for on-their-own-line comments. Whether
-a Scheme uses `;;;` or `;;;;` varies more than with CL, where `;;;` is
-extremely common. Because of its intended purpose of running in the CL
-environment, Airship Scheme must use the Common Lisp comment
-convention, including the use of `;;;` and `;;;;` where appropriate.
+### Comments
+
+In Common Lisp, end-of-line comments start with `;`. Comments on their
+own line start with `;;` if not at the top level (i.e. if indented)
+and with `;;;` or `;;;;` if at the top level (i.e. if not indented).
+Generally, `;;;;` is used for file headers and `;;;` elsewhere, but
+not every project uses `;;;;`. Scheme mostly shares the same styles
+for s-expressions and comments as Common Lisp, but Schemers don't
+always insist on using `;;;`. In Scheme, `;;;;` is also infrequently
+seen.
+
+Airship Scheme **must** use the `;;;;` comment convention in both the
+Common Lisp and Scheme files. This means that comments on their own
+line that are not indented use `;;;` except if they are a heading
+and/or header (typically at the top of the file). Those use `;;;;`
+instead.
+
+#### Example
+
+The following example code has *terrible* style because the comments
+are unnecessary for the level of complexity, but the code demonstrates
+the three different levels of `;`s:
+
+```common-lisp
+;;; Squares the input
+(defun square (x) ; x is a number
+  ;; Squares x
+  (expt x 2))
+```
+
+```scheme
+;;; Squares the input
+(define (square x) ; x is a number
+  ;; Squares x
+  (expt x 2))
+```
+
+### Naming conventions
 
 In Common Lisp, predicates end with `p`. The old convention is to end
 with `p` if it is one word, such as `foop`, and end with `-p` if it is
@@ -156,8 +182,7 @@ as necessary in Common Lisp as in Scheme. In this project, `!` should
 be used.
 
 Scheme uses `foo->bar` for conversion procedures while Common Lisp
-tends to use `foo-to-bar`. Scheme uses `$foo` for constants while
-Common Lisp uses `+foo+`. **Never** use `$foo` in Common Lisp code.
+tends to use `foo-to-bar`.
 
 Common Lisp global variables use "earmuffs", like `*foo*`. However,
 this is actually just a side effect of all portable Common Lisp global
