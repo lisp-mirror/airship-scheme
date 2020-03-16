@@ -13,7 +13,7 @@
   :depends-on (:alexandria
                :float-features
                ;; Note: Temporary dependency until the utils are spun out of the game engine repository
-               :zombie-raptor)
+               :zombie-raptor/util)
   :components ((:file "package")
                (:file "scheme-boolean")
                (:file "scheme-read")))
