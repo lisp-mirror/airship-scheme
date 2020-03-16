@@ -256,20 +256,20 @@
 ;;;; 6.3 - Booleans
 
 (define-scheme-predicate (not obj)
-  (eq obj :false))
+  (eq obj %scheme-boolean:false))
 
 (define-scheme-predicate (boolean? obj)
   (or (and (typep obj 'boolean)
            (not (null obj)))
-      (eq obj :false)))
+      (eq obj %scheme-boolean:false)))
 
 (define-scheme-predicate (boolean=? . booleans)
   (cond ((null booleans) t)
         ((eq (car booleans) t)
          (every (lambda (x) (eq x t)) booleans))
-        ((eq (car booleans) :false)
-         (every (lambda (x) (eq x :false)) booleans))
-        (t :false)))
+        ((eq (car booleans) %scheme-boolean:false)
+         (every (lambda (x) (eq x %scheme-boolean:false)) booleans))
+        (t %scheme-boolean:false)))
 
 ;;;; 6.4 - Pairs and lists
 
@@ -373,7 +373,7 @@
 (define-scheme-predicate (symbol? obj)
   (and (symbolp obj)
        (not (typep obj 'boolean))
-       (not (eq obj :false))))
+       (not (eq obj %scheme-boolean:false))))
 
 ;;; (symbol=? . symbols)
 ;;; (symbol->string symbol)
