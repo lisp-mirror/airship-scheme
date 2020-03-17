@@ -49,7 +49,7 @@
 
 (define-scheme-predicate (integer? obj)
   (or (integerp obj)
-      (and (numberp obj) (zerop (second-value (round obj))))))
+      (and (numberp obj) (zerop (nth-value 1 (round obj))))))
 
 (define-scheme-predicate (exact? z)
   (exactp z))
@@ -128,7 +128,7 @@
   (floor n1 n2))
 
 (define-scheme-procedure (floor-quotient n1 n2)
-  (first-value (floor n1 n2)))
+  (nth-value 0 (floor n1 n2)))
 
 (define-scheme-procedure (floor-remainder n1 n2)
   (mod n1 n2))
@@ -137,13 +137,13 @@
   (truncate n1 n2))
 
 (define-scheme-procedure (truncate-quotient n1 n2)
-  (first-value (truncate n1 n2)))
+  (nth-value 0 (truncate n1 n2)))
 
 (define-scheme-procedure (truncate-remainder n1 n2)
   (rem n1 n2))
 
 (define-scheme-procedure (quotient n1 n2)
-  (first-value (truncate n1 n2)))
+  (nth-value 0 (truncate n1 n2)))
 
 (define-scheme-procedure (remainder n1 n2)
   (rem n1 n2))
@@ -164,16 +164,16 @@
   (denominator q))
 
 (define-scheme-procedure (floor x)
-  (first-value (floor x)))
+  (nth-value 0 (floor x)))
 
 (define-scheme-procedure (ceiling x)
-  (first-value (ceiling x)))
+  (nth-value 0 (ceiling x)))
 
 (define-scheme-procedure (truncate x)
-  (first-value (truncate x)))
+  (nth-value 0 (truncate x)))
 
 (define-scheme-procedure (round x)
-  (first-value (round x)))
+  (nth-value 0 (round x)))
 
 ;;; (rationalize x y)
 
@@ -256,7 +256,7 @@
 ;;;; 6.3 - Booleans
 
 (define-scheme-predicate (not obj)
-  (eq obj '%scheme-boolean:false))
+  (eq obj '%scheme-boolean:f))
 
 (define-scheme-predicate (boolean? obj)
   (scheme-boolean-p obj))
@@ -265,9 +265,9 @@
   (cond ((null booleans) t)
         ((eq (car booleans) t)
          (every (lambda (x) (eq x t)) booleans))
-        ((eq (car booleans) '%scheme-boolean:false)
-         (every (lambda (x) (eq x '%scheme-boolean:false)) booleans))
-        (t '%scheme-boolean:false)))
+        ((eq (car booleans) '%scheme-boolean:f)
+         (every (lambda (x) (eq x '%scheme-boolean:f)) booleans))
+        (t '%scheme-boolean:f)))
 
 ;;;; 6.4 - Pairs and lists
 
@@ -497,7 +497,7 @@
   (apply #'concatenate 'string string))
 
 (define-scheme-procedure (string->list string &optional start end)
- (subseq-coerce string 'list start end))
+ (coerce-subseq string 'list start end))
 
 (define-scheme-procedure (list->string list)
   (coerce list 'string))
@@ -535,16 +535,16 @@
   (setf (svref vector k) obj))
 
 (define-scheme-procedure (vector->list vector &optional start end)
-  (subseq-coerce vector 'list start end))
+  (coerce-subseq vector 'list start end))
 
 (define-scheme-procedure (list->vector list)
   (coerce list 'simple-vector))
 
 (define-scheme-procedure (vector->string vector &optional start end)
-  (subseq-coerce vector 'string start end))
+  (coerce-subseq vector 'string start end))
 
 (define-scheme-procedure (string->vector string &optional start end)
-  (subseq-coerce string 'vector start end))
+  (coerce-subseq string 'vector start end))
 
 (define-scheme-procedure (vector-copy vector &optional start end)
   (copy-seq-or-subseq vector start end))

@@ -11,10 +11,12 @@
   :bug-tracker "https://gitlab.com/mbabich/airship-scheme/issues"
   :source-control (:git "https://gitlab.com/mbabich/airship-scheme.git")
   :depends-on (:alexandria
+               :babel
                :float-features
                ;; Note: Temporary dependency until the utils are spun out of the game engine repository
                :zombie-raptor/util)
   :components ((:file "package")
                (:file "scheme-boolean")
                (:file "scheme-core")
-               (:file "scheme-read")))
+               (:file "scheme-read")
+               (:file "standard-procedures")))
