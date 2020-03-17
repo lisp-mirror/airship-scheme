@@ -61,7 +61,7 @@
   (integerp z))
 
 (define-scheme-predicate (finite? z)
-  (not (and (floatp z) (or (infinitep z) (nanp z)))))
+  (finitep z))
 
 (define-scheme-predicate (infinite? z)
   (infinitep z))
@@ -256,20 +256,18 @@
 ;;;; 6.3 - Booleans
 
 (define-scheme-predicate (not obj)
-  (eq obj %scheme-boolean:false))
+  (eq obj '%scheme-boolean:false))
 
 (define-scheme-predicate (boolean? obj)
-  (or (and (typep obj 'boolean)
-           (not (null obj)))
-      (eq obj %scheme-boolean:false)))
+  (scheme-boolean-p obj))
 
 (define-scheme-predicate (boolean=? . booleans)
   (cond ((null booleans) t)
         ((eq (car booleans) t)
          (every (lambda (x) (eq x t)) booleans))
-        ((eq (car booleans) %scheme-boolean:false)
-         (every (lambda (x) (eq x %scheme-boolean:false)) booleans))
-        (t %scheme-boolean:false)))
+        ((eq (car booleans) '%scheme-boolean:false)
+         (every (lambda (x) (eq x '%scheme-boolean:false)) booleans))
+        (t '%scheme-boolean:false)))
 
 ;;;; 6.4 - Pairs and lists
 
@@ -371,9 +369,7 @@
 ;;;; 6.5 Symbols
 
 (define-scheme-predicate (symbol? obj)
-  (and (symbolp obj)
-       (not (typep obj 'boolean))
-       (not (eq obj %scheme-boolean:false))))
+  (scheme-symbol-p obj))
 
 ;;; (symbol=? . symbols)
 ;;; (symbol->string symbol)
@@ -518,9 +514,7 @@
 ;;;; 6.8 Vectors
 
 (define-scheme-predicate (vector? obj)
-  (and (typep obj 'simple-array)
-       (not (typep obj '(simple-array character)))
-       (not (typep obj '(simple-array (unsigned-byte 8))))))
+  (typep obj 'scheme-vector))
 
 (define-scheme-procedure (make-vector k &optional fill)
   (if fill

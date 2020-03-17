@@ -1,9 +1,5 @@
 (cl:in-package #:airship-scheme)
 
-;;; Symbols are read into this package.
-(defpackage #:scheme
-  (:use))
-
 ;; TODO: Stub
 (defun tokenize (stream)
   (loop :for match := (read-case (stream x)
@@ -14,15 +10,6 @@
                         ((:or #\( #\)) (format t "~S~%" x) (cons :parens x)))
         :while match
         :collect match))
-
-;;; Invert case for CL interoperability.
-(define-function (invert-case :return simple-string) ((simple-string simple-string))
-  (map 'simple-string
-       (lambda (c)
-         (cond ((upper-case-p c) (char-downcase c))
-               ((lower-case-p c) (char-upcase c))
-               (t c)))
-       simple-string))
 
 (defun parse (tokens &optional literal?)
   (loop :with tokens* := tokens

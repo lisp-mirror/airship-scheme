@@ -16,4 +16,5 @@
                :zombie-raptor/util)
   :components ((:file "package")
                (:file "scheme-boolean")
+               (:file "scheme-core")
                (:file "scheme-read")))
