@@ -25,10 +25,15 @@
 ;;;; 6.1 - Equivalence predicates
 ;;;;
 ;;;; Note: These have to be implemented last to make sure that they
-;;;; follow Scheme equivalence rules.
+;;;; follow Scheme equivalence rules... except for eq? which is
+;;;; sufficiently under-specified that being synonymous with EQ is not
+;;;; an issue.
 
 ;;; (eqv? obj1 obj2)
-;;; (eq? obj1 obj2)
+
+(define-scheme-predicate (eq? obj1 obj2)
+  (eq obj1 obj2))
+
 ;;; (equal? obj1 obj2)
 
 ;;;; 6.2 - Numbers
