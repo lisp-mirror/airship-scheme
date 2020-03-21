@@ -140,3 +140,40 @@ rules for input.
      (if (null ,pair)
          (error "Attempted to use a cxr operation on an empty list")
          (,variable ,pair))))
+
+;;; TODO: This is temporary. When Scheme library support is added, the
+;;; libraries would actually generate something almost like this, but
+;;; only for the symbols that are specified in the library definition,
+;;; with potential renaming as a possibility.
+(defmacro with-r7rs-global-environment (&body body)
+  "
+Puts every R7RS procedure into one big LET to achieve Lisp-1 behavior
+from within the host Lisp-2. This means that FUNCALL (or
+MULTIPLE-VALUE-CALL) is always required internally within the Scheme
+when calling procedures. That is, procedures and variables now share
+the same namespace, which is 'global' because this is the parent
+environment to all Scheme-defined procedures.
+
+e.g. Scheme's (foo 42) is really (funcall foo continuation 42)
+
+Direct usage of this macro would look like this:
+
+   (with-r7rs-global-environment
+     (funcall r7rs::odd? #'identity 1))
+
+Written in Scheme, it would look like this:
+
+   (odd? 1)
+
+And the return value would be printed as T if the result is printed as
+Common Lisp or #t if the result is printed as Scheme.
+"
+  (let* ((standard-procedures (let ((l (list)))
+                                (do-symbols (s :r7rs l)
+                                  (push s l))))
+         (procedure-variables (mapcar (lambda (s)
+                                        `(,s (function ,s)))
+                                      standard-procedures)))
+    `(let ,procedure-variables
+       (declare (ignorable ,@standard-procedures))
+       ,@body)))
