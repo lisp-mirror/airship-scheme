@@ -177,3 +177,20 @@ Common Lisp or #t if the result is printed as Scheme.
     `(let ,procedure-variables
        (declare (ignorable ,@standard-procedures))
        ,@body)))
+
+;;; TODO:
+
+(defun cps-transform-procedure (continuation identifier rest)
+  (format t "parent: ~S~%" identifier)
+  (loop :for item :in rest
+        :do (cps-transform continuation item)))
+
+(defun cps-transform (continuation expression)
+  (etypecase expression
+    (list (destructuring-bind (identifier &rest rest) expression
+            (cps-transform-procedure continuation identifier rest)
+            (let ((g (gensym)))
+              (format t "~S~%" `(lambda (,g) (,identifier ,continuation ,g))))))
+    (symbol
+     (format t "~S~%" expression)
+     expression)))
