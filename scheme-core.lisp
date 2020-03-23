@@ -178,19 +178,32 @@ Common Lisp or #t if the result is printed as Scheme.
        (declare (ignorable ,@standard-procedures))
        ,@body)))
 
-;;; TODO:
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun cps-transform-procedure (continuation identifier rest)
+    (loop :with items := (reverse rest)
+          :for item :in items
+          :for gensym := (if (listp item) (gensym) nil)
+          :when gensym
+            :collect (list gensym item) :into gensyms
+          :collect (if gensym gensym item) :into args
+          :finally
+             ;; returns either a continuation or the top-level
+             ;; continuation function call
+             (return (loop :with k* := `(,identifier ,continuation ,@(reverse args))
+                           :for (gensym item) :in gensyms
+                           :for k := (cps-transform `(lambda (,gensym) ,(or k k*)) item)
+                           :finally (return (or k k*))))))
 
-(defun cps-transform-procedure (continuation identifier rest)
-  (format t "parent: ~S~%" identifier)
-  (loop :for item :in rest
-        :do (cps-transform continuation item)))
+  ;; TODO: handle IF and non-symbol atoms; cleanup the code; remove
+  ;; the transformation when it's not necessary
+  (defun cps-transform (continuation expression)
+    (etypecase expression
+      (list (destructuring-bind (identifier &rest rest) expression
+              (cps-transform-procedure continuation identifier rest)))
+      (symbol expression))))
 
-(defun cps-transform (continuation expression)
-  (etypecase expression
-    (list (destructuring-bind (identifier &rest rest) expression
-            (cps-transform-procedure continuation identifier rest)
-            (let ((g (gensym)))
-              (format t "~S~%" `(lambda (,g) (,identifier ,continuation ,g))))))
-    (symbol
-     (format t "~S~%" expression)
-     expression)))
+;;; example:
+;;; (let ((x 2) (y 3))
+;;;   (with-cps-transform #'identity (r7rs::+ (r7rs::* x x) y)))
+(defmacro with-cps-transform (continuation expression)
+  (cps-transform continuation expression))
