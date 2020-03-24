@@ -207,3 +207,27 @@ Common Lisp or #t if the result is printed as Scheme.
 ;;;   (with-cps-transform #'identity (r7rs::+ (r7rs::* x x) y)))
 (defmacro with-cps-transform (continuation expression)
   (cps-transform continuation expression))
+
+(defpackage #:%scheme-thunk (:use) (:export #:thunk))
+
+(define-function (thunk? :inline t) (object)
+  "Determines if an object is a thunk."
+  (and (listp object)
+       (eq (car object) '%scheme-thunk:thunk)))
+
+(define-function (call-next :inline t) (thunk)
+  "Calls the contents of a thunk."
+  (funcall (cdr thunk)))
+
+(defun trampoline (object)
+  "
+Iterates through tail-recursive functions that are wrapped in a thunk
+until it stops getting thunks.
+"
+  (do ((item object (call-next item)))
+      ((not (thunk? item)) item)))
+
+(defmacro thunk (object)
+  "Creates a thunk."
+  `(cons '%scheme-thunk:thunk
+         (lambda () ,object)))
