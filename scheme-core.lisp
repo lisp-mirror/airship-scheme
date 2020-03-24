@@ -189,7 +189,7 @@ Common Lisp or #t if the result is printed as Scheme.
           :finally
              ;; returns either a continuation or the top-level
              ;; continuation function call
-             (return (loop :with k* := `(,identifier ,continuation ,@(reverse args))
+             (return (loop :with k* := `(multiple-value-call ,identifier ,continuation ,@(reverse args))
                            :for (gensym item) :in gensyms
                            :for k := (cps-transform `(lambda (,gensym) ,(or k k*)) item)
                            :finally (return (or k k*))))))
