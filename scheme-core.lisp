@@ -194,13 +194,16 @@ Common Lisp or #t if the result is printed as Scheme.
                            :for k := (cps-transform `(lambda (,gensym) ,(or k k*)) item)
                            :finally (return (or k k*))))))
 
-  ;; TODO: handle IF and non-symbol atoms; cleanup the code; remove
-  ;; the transformation when it's not necessary
+  ;; TODO: handle IF; cleanup the code; remove the transformation when
+  ;; it's not necessary
   (defun cps-transform (continuation expression)
-    (etypecase expression
+    (typecase expression
+      ;; Note: Assumes the Scheme boolean, not the CL boolean.
+      (null (error "Syntax Error: () is an empty procedure call."))
       (list (destructuring-bind (identifier &rest rest) expression
               (cps-transform-procedure continuation identifier rest)))
-      (symbol expression))))
+      ;; (symbol expression)
+      (t expression))))
 
 ;;; example:
 ;;; (let ((x 2) (y 3))
