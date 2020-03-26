@@ -112,23 +112,27 @@ in a form that CL expects.
 ;;; TODO: The external-to-CL versions of these procedures should call
 ;;; the function within the trampoline with #'identity as the
 ;;; continuation.
-(defmacro define-scheme-procedure (variable-and-scheme-lambda-list &body body)
-  "Defines a Scheme procedure based on a Common Lisp body."
-  (destructuring-bind (name &rest arguments)
-      variable-and-scheme-lambda-list
-    (let ((arguments (if (listp arguments)
-                         (cdr (generate-lambda-list variable-and-scheme-lambda-list))
-                         `(&rest ,arguments)))
-          (continuation (gensym #.(symbol-name '#:c))))
-      `(define-function ,(intern (symbol-name name) '#:r7rs) ,(list* `(,continuation function) arguments)
-         (multiple-value-call ,continuation (progn ,@body))))))
+(defmacro %define-scheme-procedure ((name continuation &rest scheme-lambda-list) &body body)
+  "
+Defines a Scheme procedure with a Common Lisp body and an explicit
+continuation.
+"
+  `(define-function ,(intern (symbol-name name) '#:r7rs)
+       ,(list* `(,continuation function) (generate-lambda-list scheme-lambda-list))
+     (multiple-value-call ,continuation (progn ,@body))))
 
-(defmacro define-scheme-predicate ((variable &rest arguments) &body body)
+;;; TODO: Explicit continuation in the call to %define
+(defmacro define-scheme-procedure ((name &rest scheme-lambda-list) &body body)
+  "Defines a Scheme procedure based on a Common Lisp body."
+  `(%define-scheme-procedure (,name ,(gensym #.(symbol-name '#:k)) ,@scheme-lambda-list)
+     ,@body))
+
+(defmacro define-scheme-predicate ((name &rest scheme-lambda-list) &body body)
   "
 Defines a Scheme procedure based on a Common Lisp body, while also
 converting a NIL return value to #f
 "
-  `(define-scheme-procedure (,variable ,@arguments)
+  `(define-scheme-procedure (,name ,@scheme-lambda-list)
      (nil-to-false (progn ,@body))))
 
 (defmacro define-scheme-cxr ((variable pair))

@@ -614,8 +614,13 @@
 ;;; (for-each proc list . lists)
 ;;; (string-for-each proc string . strings)
 ;;; (vector-for-each proc vector . vectors)
-;;; (call-with-current-continuation proc)
-;;; (call/cc proc)
+
+(%define-scheme-procedure (call-with-current-continuation continuation procedure)
+  (multiple-value-call procedure continuation))
+
+(%define-scheme-procedure (call/cc continuation procedure)
+  (multiple-value-call procedure continuation))
+
 ;;; (values . objs)
 ;;; (call-with-values producer consumer)
 ;;; (dynamic-wind before thunk after)
