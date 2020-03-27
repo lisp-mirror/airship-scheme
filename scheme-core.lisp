@@ -195,17 +195,34 @@ Common Lisp or #t if the result is printed as Scheme.
              ;; continuation function call
              (return (loop :with k* := `(multiple-value-call ,identifier ,continuation ,@(reverse args))
                            :for (gensym item) :in gensyms
-                           :for k := (cps-transform `(lambda (,gensym) ,(or k k*)) item)
+                           :for k := (cps-transform `(lambda ,(gensym (symbol-name '#:k)) ,(or k k*)) item)
                            :finally (return (or k k*))))))
 
-  ;; TODO: handle IF; cleanup the code; remove the transformation when
-  ;; it's not necessary
+  ;; TODO: add a top level continuation; cleanup the code; remove the
+  ;; transformation when it's not necessary
   (defun cps-transform (continuation expression)
     (typecase expression
       ;; Note: Assumes the Scheme boolean, not the CL boolean.
       (null (error "Syntax Error: () is an empty procedure call."))
       (list (destructuring-bind (identifier &rest rest) expression
-              (cps-transform-procedure continuation identifier rest)))
+              (check-type identifier symbol)
+              (case identifier
+                (r7rs::if
+                 (destructuring-bind (test then &optional else) rest
+                   (let* ((k (if (listp test)
+                                 (gensym (symbol-name '#:k))
+                                 test))
+                          (then (cps-transform continuation then))
+                          ;; TODO: default return value?
+                          (else (if else (list (cps-transform continuation else)) nil))
+                          ;; Note: Tests against the Scheme boolean
+                          (continuation-branch `(if (eq ,k '%scheme-boolean:f)
+                                                    ,else
+                                                    ,then)))
+                     (if (listp test)
+                         (cps-transform `(lambda (,k) ,continuation-branch) test)
+                         continuation-branch))))
+                (t (cps-transform-procedure continuation identifier rest)))))
       ;; (symbol expression)
       (t expression))))
 
