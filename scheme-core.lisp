@@ -213,9 +213,11 @@ Common Lisp or #t if the result is printed as Scheme.
                                  (gensym (symbol-name '#:k))
                                  test))
                           (then (cps-transform continuation then))
-                          ;; TODO: default return value?
-                          (else (if else (list (cps-transform continuation else)) nil))
-                          ;; Note: Tests against the Scheme boolean
+                          (else (if else
+                                    (cps-transform continuation else)
+                                    ;; Note: unspecified
+                                    ''%scheme-boolean:f))
+                          ;; Note: uses the Scheme boolean
                           (continuation-branch `(if (eq ,k '%scheme-boolean:f)
                                                     ,else
                                                     ,then)))
