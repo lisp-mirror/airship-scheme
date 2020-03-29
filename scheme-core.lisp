@@ -186,7 +186,7 @@ Common Lisp or #t if the result is printed as Scheme.
   (defun cps-transform-procedure (continuation identifier rest)
     (loop :with items := (reverse rest)
           :for item :in items
-          :for gensym := (if (listp item) (gensym) nil)
+          :for gensym := (if (listp item) (gensym (symbol-name '#:k)) nil)
           :when gensym
             :collect (list gensym item) :into gensyms
           :collect (if gensym gensym item) :into args
@@ -195,7 +195,7 @@ Common Lisp or #t if the result is printed as Scheme.
              ;; continuation function call
              (return (loop :with k* := `(multiple-value-call ,identifier ,continuation ,@(reverse args))
                            :for (gensym item) :in gensyms
-                           :for k := (cps-transform `(lambda ,(gensym (symbol-name '#:k)) ,(or k k*)) item)
+                           :for k := (cps-transform `(lambda (,gensym) ,(or k k*)) item)
                            :finally (return (or k k*))))))
 
   ;; TODO: add a top level continuation; cleanup the code; remove the
