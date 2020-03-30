@@ -20,7 +20,6 @@
 
 ;;;; todo: add type checks where type checks are needed
 ;;;; todo: add errors when errors are required
-;;;; todo: any entry that is commented out is incomplete
 
 ;;;; 6.1 - Equivalence predicates
 ;;;;
@@ -377,12 +376,14 @@
   (scheme-symbol-p obj))
 
 ;;; (symbol=? . symbols)
-;;; (symbol->string symbol)
-;;; (string->symbol string)
+
+(define-scheme-procedure (symbol->string symbol)
+  (scheme-symbol-name symbol))
+
+(define-scheme-procedure (string->symbol string)
+  (scheme-symbol string))
 
 ;;;; 6.6 Characters
-
-;;; fixme: a unicode portability library might have to be used here
 
 (define-scheme-predicate (char? obj)
   (typep obj 'character))
@@ -418,35 +419,42 @@
   (apply #'char-not-lessp char more-chars))
 
 (define-scheme-predicate (char-alphabetic? char)
-  #+sbcl
-  (not (not (sb-unicode:alphabetic-p char)))
-  #-sbcl
-  (error "Support for this procedure in this CL implementation has not yet been added."))
+  (char-alphabetic-p char))
 
-;;; (char-numeric? char)
+(define-scheme-predicate (char-numeric? char)
+  (char-numeric-p char))
 
 (define-scheme-predicate (char-whitespace? char)
-  #+sbcl
-  (not (not (sb-unicode:whitespace-p char)))
-  #-sbcl
-  (error "Support for this procedure in this CL implementation has not yet been added."))
+  (char-whitespace-p char))
 
-;;; (char-upper-case? letter)
-;;; (char-lower-case? letter)
+(define-scheme-predicate (char-upper-case? letter)
+  (char-lower-case-p letter))
 
-;;; (digit-value char)
+(define-scheme-predicate (char-lower-case? letter)
+  (char-lower-case-p letter))
 
-;;; (char->integer char)
-;;; (integer->char n)
+(define-scheme-predicate (digit-value char)
+  (digit-value char))
 
-;;; (char-upcase char)
-;;; (char-downcase char)
-;;; (char-foldcase char)
+(define-scheme-procedure (char->integer char)
+  (char-code char))
+
+(define-scheme-procedure (integer->char n)
+  (code-char n))
+
+(define-scheme-procedure (char-upcase char)
+  (char-upcase* char))
+
+(define-scheme-procedure (char-downcase char)
+  (char-downcase* char))
+
+(define-scheme-procedure (char-foldcase char)
+  (char-foldcase char))
 
 ;;;; 6.7 Strings
 
 (define-scheme-predicate (string? obj)
-  (stringp obj))
+  (typep obj 'scheme-string))
 
 (define-scheme-procedure (make-string k &optional char)
   (if char
@@ -466,34 +474,44 @@
 (define-scheme-procedure (string-set! string k char)
   (setf (char string k) char))
 
-;;; (string=? . strings)
-;;; (string-ci=? . strings)
-;;; (string<? . strings)
-;;; (string-ci<? . strings)
-;;; (string>? . strings)
-;;; (string-ci>? . strings)
-;;; (string<=? . strings)
-;;; (string-ci<=? . strings)
-;;; (string>=? . strings)
-;;; (string-ci>=? . strings)
+(define-scheme-predicate (string=? . strings)
+  (apply #'string=? strings))
+
+(define-scheme-predicate (string-ci=? . strings)
+  (apply #'string-ci=? strings))
+
+(define-scheme-predicate (string<? . strings)
+  (apply #'string<? strings))
+
+(define-scheme-predicate (string-ci<? . strings)
+  (apply #'string-ci<? strings))
+
+(define-scheme-predicate (string>? . strings)
+  (apply #'string>? strings))
+
+(define-scheme-predicate (string-ci>? . strings)
+  (apply #'string-ci>? strings))
+
+(define-scheme-predicate (string<=? . strings)
+  (apply #'string<=? strings))
+
+(define-scheme-predicate (string-ci<=? . strings)
+  (apply #'string-ci<=? strings))
+
+(define-scheme-predicate (string>=? . strings)
+  (apply #'string>=? strings))
+
+(define-scheme-predicate (string-ci>=? . strings)
+  (apply #'string-ci>=? strings))
 
 (define-scheme-procedure (string-upcase string)
-  #+sbcl
-  (sb-unicode:uppercase string)
-  #-sbcl
-  (string-upcase string))
+  (string-upcase* string))
 
 (define-scheme-procedure (string-downcase string)
-  #+sbcl
-  (sb-unicode:lowercase string)
-  #-sbcl
-  (string-downcase string))
+  (string-downcase* string))
 
 (define-scheme-procedure (string-foldcase string)
-  #+sbcl
-  (sb-unicode:casefold string)
-  #-sbcl
-  (error "This procedure is not implemented for this implementation."))
+  (string-foldcase string))
 
 (define-scheme-procedure (substring string start end)
   (subseq string start end))
@@ -502,7 +520,7 @@
   (apply #'concatenate 'string string))
 
 (define-scheme-procedure (string->list string &optional start end)
- (coerce-subseq string 'list start end))
+  (coerce-subseq string 'list start end))
 
 (define-scheme-procedure (list->string list)
   (coerce list 'string))

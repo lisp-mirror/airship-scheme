@@ -48,10 +48,13 @@ in a form that CL expects.
                (t c)))
        simple-string))
 
-(define-function (scheme-symbol :inline t) ((symbol symbol))
+(define-function (scheme-symbol-name :inline t) ((symbol symbol))
   "Interns a Scheme symbol using one package, with its case inverted."
-  (intern (invert-case (symbol-name symbol))
-          '#:r7rs))
+  (invert-case (symbol-name symbol)))
+
+(define-function (scheme-symbol :inline t) ((string simple-string))
+  "Interns a Scheme symbol using one package, with its case inverted."
+  (intern (invert-case string) '#:r7rs))
 
 (define-function (nanp :inline t) ((number number))
   "Tests if a number is NaN"
