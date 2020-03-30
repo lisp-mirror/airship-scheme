@@ -58,6 +58,12 @@ in a form that CL expects.
   "Interns a Scheme symbol using one package, with its case inverted."
   (intern (invert-case string) '#:r7rs))
 
+(define-function (%symbol= :inline t :check-type t) ((symbol-1 symbol) (symbol-2 symbol))
+  (eq symbol-1 symbol-2))
+
+(defun symbol= (&rest symbols)
+  (compare #'%symbol= symbols))
+
 (define-function (nanp :inline t) ((number number))
   "Tests if a number is NaN"
   (and (floatp number) (float-features:float-nan-p number)))

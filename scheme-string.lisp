@@ -96,26 +96,25 @@
   (string-downcase string))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (define-function (string-compare :inline t) ((function function) (strings list))
+  (define-function (compare :inline t) ((function function) (items list))
     "
-Defines a short-circuiting string predicate on an arbitrary-length
-list of strings.
+Defines a short-circuiting predicate on an arbitrary-length list.
 "
-    (when (endp strings)
-      (error "Expected at least one string!"))
-    (loop :for old-string := nil :then string
-          :for string :in strings
-          :for match := t :then (funcall function old-string string)
+    (when (endp items)
+      (error "Expected at least one item"))
+    (loop :for old-item := nil :then item
+          :for item :in items
+          :for match := t :then (funcall function old-item item)
           :unless match :do (return nil)
           :finally (return t)))
   #+sbcl
-  (define-function (string-compare-foldcase :inline t) ((function function) (strings list))
+  (define-function (compare-foldcase :inline t) ((function function) (strings list))
     "
 Defines a short-circuiting string predicate on an arbitrary-length
 list of strings, while doing a Unicode foldcase on each string.
 "
     (when (endp strings)
-      (error "Expected at least one string!"))
+      (error "Expected at least one item"))
     (loop :for old-string := nil :then string*
           :for string :in strings
           :for string* := (string-foldcase string)
@@ -124,12 +123,12 @@ list of strings, while doing a Unicode foldcase on each string.
           :finally (return t))))
 
 (defmacro define-string-predicate ((binary-name n-ary-name) binary-predicate &key foldcase)
-  (let ((string-compare (if foldcase 'string-compare-foldcase 'string-compare)))
+  (let ((compare (if foldcase 'compare-foldcase 'compare)))
     `(progn
        (define-function (,binary-name :inline t) (string-1 string-2)
          (,binary-predicate string-1 string-2))
        (define-function ,n-ary-name (&rest strings)
-         (,string-compare (function ,binary-name) strings)))))
+         (,compare (function ,binary-name) strings)))))
 
 (defmacro define-string-predicates (&body predicates)
   `(progn

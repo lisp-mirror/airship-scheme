@@ -377,7 +377,8 @@
 (define-scheme-predicate (symbol? obj)
   (scheme-symbol-p obj))
 
-;;; (symbol=? . symbols)
+(define-scheme-predicate (symbol=? . symbols)
+  (apply #'symbol= symbols))
 
 (define-scheme-procedure (symbol->string symbol)
   (scheme-symbol-name symbol))
