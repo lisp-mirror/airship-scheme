@@ -1,3 +1,5 @@
+;;;; -*- mode: common-lisp; -*-
+
 ;;;; A package for #t and #f
 ;;;;
 ;;;; Scheme distinguishes between #f and the empty list. This package

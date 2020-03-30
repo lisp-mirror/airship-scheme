@@ -1,3 +1,5 @@
+;;;; -*- mode: common-lisp; -*-
+
 ;;;; Note: SBCL requires the use of SB-UNICODE for full Unicode
 ;;;; support for these various functions, but other Unicode-supporting
 ;;;; implementations just directly support full Unicode in the CL

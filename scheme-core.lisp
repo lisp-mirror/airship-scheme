@@ -1,3 +1,5 @@
+;;;; -*- mode: common-lisp; -*-
+
 (in-package #:airship-scheme)
 
 ;;; Symbols are read into this package.

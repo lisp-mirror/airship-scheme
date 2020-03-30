@@ -1,3 +1,5 @@
+;;;; -*- mode: common-lisp; -*-
+
 (in-package #:airship-scheme)
 
 ;;;; Standard procedures

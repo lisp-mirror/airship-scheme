@@ -1,3 +1,5 @@
+;;;; -*- mode: common-lisp; -*-
+
 (in-package #:cl)
 
 (asdf:defsystem #:airship-scheme

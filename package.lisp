@@ -1,3 +1,5 @@
+;;;; -*- mode: common-lisp; -*-
+
 (cl:defpackage #:airship-scheme
   (:use #:cl
         #:zombie-raptor/util)

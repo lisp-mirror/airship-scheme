@@ -1,3 +1,5 @@
+;;;; -*- mode: common-lisp; -*-
+
 (cl:in-package #:airship-scheme)
 
 ;; TODO: Stub
