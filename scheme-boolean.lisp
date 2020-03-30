@@ -14,5 +14,4 @@
   (:import-from #:cl #:t)
   (:export #:t #:f))
 
-(cl:intern (cl:symbol-name '#:f)
-           '#:%scheme-boolean)
+(defconstant %scheme-boolean:f '%scheme-boolean:f)
