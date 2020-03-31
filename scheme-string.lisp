@@ -127,6 +127,15 @@ list of strings, while doing a Unicode foldcase on each string.
     `(progn
        (define-function (,binary-name :inline t) (string-1 string-2)
          (,binary-predicate string-1 string-2))
+       (define-compiler-macro ,n-ary-name (&whole whole &rest strings)
+         (if strings
+             (if (endp (cdr strings))
+                 ;; TODO: optimize the one-arg version properly
+                 whole
+                 (if (endp (cddr strings))
+                     (list ',binary-name (car strings) (cadr strings))
+                     whole))
+             whole))
        (define-function ,n-ary-name (&rest strings)
          (,compare (function ,binary-name) strings)))))
 
