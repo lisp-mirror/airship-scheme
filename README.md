@@ -35,6 +35,21 @@ Lisp and Scheme have drifted further apart as languages over the past
 few decades, making some of the assumptions of past approaches no
 longer viable.
 
+Why use this project?
+---------------------
+
+This project is primarily aimed at both Common Lispers and Schemers.
+
+From the Common Lisp perspective, it offers Scheme as a convenient
+library: it's no harder to install or use than any other CL library.
+From the Scheme perspective, it offers the potential of a
+high-performance implementation for "free" by taking advantage of
+high-performance CL compilers like SBCL. From both perspectives, it
+will allow someone to wrap libraries written for one of the languages
+for the use in the other, which could potentially double the number of
+libraries available. It also allows a level of integration between the
+two languages that's not normally seen.
+
 Installing
 ----------
 
