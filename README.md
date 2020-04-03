@@ -27,14 +27,16 @@ Overview
 
 Airship Scheme is a new implementation of the Scheme programming
 language, implemented in Common Lisp and designed to run within a
-Common Lisp environment. This allows programs to run both Scheme and
-Common Lisp code in the same runtime.
+Common Lisp environment. The embedded nature of this architecture
+allows programs to run both Scheme and Common Lisp code in the same
+runtime.
 
 There are many existing implementations that compile Scheme to
 languages like C or JavaScript. With the choice of Common Lisp, the
-host language already contains many elements that Scheme requires.
-This includes the cons cell (or cons pair) data structure and the
-numeric tower.
+host language already contains many elements that Scheme requires. The
+host CL's data structures include the cons cell (or cons pair) data
+structure and the numeric tower, both of which can be used in the
+Scheme itself.
 
 On the other hand, the Scheme to CL compilation process is no longer
 as trivial as it was in the days of
