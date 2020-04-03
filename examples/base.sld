@@ -1,3 +1,5 @@
+;;;; -*- mode: scheme; -*-
+
 ;;; A simple library consisting of the public procedures and macros
 ;;; for all of the example programs.
 

@@ -1,3 +1,5 @@
+;;;; -*- mode: scheme; -*-
+
 ;;; A simple hello world of arbitrary length implemented via tail
 ;;; recursion. hello* is the helper procedure to hello. The main
 ;;; procedure is hello, which should be called with 0 or more

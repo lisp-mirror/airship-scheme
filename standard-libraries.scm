@@ -1,3 +1,5 @@
+;;;; -*- mode: scheme; -*-
+
 ;;;; R7RS Standard Libraries
 
 (define-library (scheme base)
