@@ -1,1 +1,3 @@
 *.lisp linguist-language=Common-Lisp
+*.scm linguist-language=Scheme
+*.sld linguist-language=Scheme
