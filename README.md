@@ -64,7 +64,19 @@ two languages that's not normally seen.
 Installing
 ----------
 
-See [INSTALL.md](INSTALL.md) for installation instructions.
+See [INSTALL.md](INSTALL.md) for complete installation instructions.
+
+Quickstart
+----------
+
+The fastest way to get a Common Lisp development environment for
+someone who doesn't currently have one is to install
+[Portacle](https://portacle.github.io/). From there, it is just a
+matter of installing the airship-scheme Quicklisp library. This
+process is somewhat involved until Quicklisp adds the airship-scheme
+project to its repository. This can't be done until version 0.1 as
+well as the spinning off of the utility library that this project
+uses.
 
 Contributing
 ------------
