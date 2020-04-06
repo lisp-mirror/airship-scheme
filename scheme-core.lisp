@@ -204,46 +204,61 @@ Common Lisp or #t if the result is printed as Scheme.
           :finally
              ;; returns either a continuation or the top-level
              ;; continuation function call
-             (return (loop :with k* := `(multiple-value-call ,identifier ,continuation ,@(reverse args))
+             (return (loop :with k* := `(funcall ,identifier ,continuation ,@(reverse args))
                            :for (gensym item) :in gensyms
-                           :for k := (cps-transform `(lambda (,gensym) ,(or k k*)) item)
+                           :for k := (funcall (cps-transform* gensym item) (or k k*))
                            :finally (return (or k k*))))))
 
-  ;; TODO: add a top level continuation; cleanup the code; remove the
-  ;; transformation when it's not necessary
-  (defun cps-transform (continuation expression)
-    (typecase expression
-      ;; Note: Assumes the Scheme boolean, not the CL boolean.
-      (null (error "Syntax Error: () is an empty procedure call."))
-      (list (destructuring-bind (identifier &rest rest) expression
-              (check-type identifier symbol)
-              (case identifier
-                (r7rs::if
-                 (destructuring-bind (test then &optional else) rest
-                   (let* ((k (if (listp test)
-                                 (gensym (symbol-name '#:k))
-                                 test))
-                          (then (cps-transform continuation then))
-                          (else (if else
-                                    (cps-transform continuation else)
-                                    ;; Note: unspecified
-                                    ''%scheme-boolean:f))
-                          ;; Note: uses the Scheme boolean
-                          (continuation-branch `(if (eq ,k '%scheme-boolean:f)
-                                                    ,else
-                                                    ,then)))
-                     (if (listp test)
-                         (cps-transform `(lambda (,k) ,continuation-branch) test)
-                         continuation-branch))))
-                (t (cps-transform-procedure continuation identifier rest)))))
-      ;; (symbol expression)
-      (t expression))))
+  (defun cps-transform* (gensym expression)
+    (let ((gensym (or gensym (gensym))))
+      (lambda (continuation)
+        `(lambda (,gensym)
+           ,(typecase expression
+              ;; Note: Assumes the Scheme boolean, not the CL boolean.
+              (null (error "Syntax Error: () is an empty procedure call."))
+              (list (destructuring-bind (identifier-or-expression &rest rest) expression
+                      (etypecase identifier-or-expression
+                        (list
+                         (let ((k (gensym (symbol-name '#:k))))
+                           (funcall (cps-transform* k identifier-or-expression)
+                                    (funcall (cps-transform* continuation (cons k rest)) gensym))))
+                        (symbol
+                         (case identifier-or-expression
+                           ;; TODO: ensure that if hasn't been redefined
+                           ;;
+                           ;; TODO: Replace IF with a simplified transformation
+                           ;;
+                           ;; (r7rs::if
+                           ;;  (destructuring-bind (test then &optional else) rest
+                           ;;    (let* ((k (if (listp test)
+                           ;;                  (gensym (symbol-name '#:k))
+                           ;;                  test))
+                           ;;           (then (cps-transform continuation then))
+                           ;;           (else (if else
+                           ;;                     (cps-transform continuation else)
+                           ;;                     ;; Note: unspecified
+                           ;;                     ''%scheme-boolean:f))
+                           ;;           ;; Note: uses the Scheme boolean
+                           ;;           (continuation-branch `(if (eq ,k '%scheme-boolean:f)
+                           ;;                                     ,else
+                           ;;                                     ,then)))
+                           ;;      (if (listp test)
+                           ;;          (cps-transform `(lambda (,k) ,continuation-branch) test)
+                           ;;          continuation-branch))))
+                           (t (cps-transform-procedure continuation identifier-or-expression rest)))))))
+              ;; (symbol expression)
+              (t expression))))))
+
+  ;; TODO: remove the transformation when it's not necessary
+  (defun cps-transform (expression)
+    (let ((k (gensym (symbol-name '#:k))))
+      (funcall (cps-transform* k expression) k))))
 
 ;;; example:
 ;;; (let ((x 2) (y 3))
 ;;;   (with-cps-transform #'identity (r7rs::+ (r7rs::* x x) y)))
-(defmacro with-cps-transform (continuation expression)
-  (cps-transform continuation expression))
+(defmacro with-cps-transform (expression)
+  (cps-transform expression))
 
 (defpackage #:%scheme-thunk (:use) (:export #:thunk))
 
