@@ -2,7 +2,7 @@
 
 (cl:defpackage #:airship-scheme
   (:use #:cl
-        #:zombie-raptor/util)
+        #:zr-utils)
   (:import-from #:alexandria
                 #:proper-list-p)
   (:import-from #:babel
