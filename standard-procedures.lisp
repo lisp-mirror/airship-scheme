@@ -30,12 +30,14 @@
 ;;;; sufficiently under-specified that being synonymous with EQ is not
 ;;;; an issue.
 
-;;; (eqv? obj1 obj2)
+(define-scheme-predicate (eqv? obj1 obj2)
+  (eqv? obj1 obj2))
 
 (define-scheme-predicate (eq? obj1 obj2)
   (eq obj1 obj2))
 
-;;; (equal? obj1 obj2)
+;; (define-scheme-predicate (equal? obj1 obj2)
+;;   (equal? obj1 obj2))
 
 ;;;; 6.2 - Numbers
 
@@ -369,28 +371,24 @@
 (define-scheme-predicate (memq obj list)
   (member obj list :test #'eq))
 
-;;; TODO: requires eqv? and equal? to be defined
-;;;
-;;; (define-scheme-predicate (memv obj list)
-;;;   (member obj list :test #'eqv?))
-;;;
-;;; (define-scheme-predicate (member obj list &optional compare)
-;;;   (member obj list :test (or #'equal?
-;;;                              (lambda (x y)
-;;;                                (false-to-nil (funcall compare x y))))))
+(define-scheme-predicate (memv obj list)
+  (member obj list :test #'eqv?))
+
+;; (define-scheme-predicate (member obj list &optional compare)
+;;   (member obj list :test (or #'equal?
+;;                              (lambda (x y)
+;;                                (false-to-nil (funcall compare x y))))))
 
 (define-scheme-predicate (assq obj alist)
   (assoc obj alist :test #'eq))
 
-;;; TODO: requires eqv? and equal? to be defined
-;;;
-;;; (define-scheme-predicate (assv obj alist)
-;;;   (assoc obj alist :test #'eqv?))
-;;;
-;;; (define-scheme-predicate (assoc obj alist &optional compare)
-;;;   (assoc obj alist :test (or #'equal?
-;;;                              (lambda (x y)
-;;;                                (false-to-nil (funcall compare x y))))))
+(define-scheme-predicate (assv obj alist)
+  (assoc obj alist :test #'eqv?))
+
+;; (define-scheme-predicate (assoc obj alist &optional compare)
+;;   (assoc obj alist :test (or #'equal?
+;;                              (lambda (x y)
+;;                                (false-to-nil (funcall compare x y))))))
 
 (define-scheme-procedure (list-copy obj)
   (copy-list obj))

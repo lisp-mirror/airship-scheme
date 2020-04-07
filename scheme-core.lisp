@@ -76,6 +76,19 @@ in a form that CL expects.
   "Tests if a number is both not NaN and not an infinity"
   (not (and (floatp number) (or (infinitep number) (nanp number)))))
 
+(define-function eqv? (x y)
+  (typecase x
+    (symbol (typecase y (symbol (%symbol= x y))))
+    ;; TODO: Both x and y must be exact, or both must be inexact
+    (number (typecase y (number (= x y))))
+    (character (typecase y (character (char= x y))))
+    (t (eq x y))))
+
+;;; TODO: Must always terminate even if the list is circular.
+;;;
+;;; TODO: recursively compare sequences
+;; (define-function equal? (x y))
+
 ;;; TODO: fixme: This old function might be defining Scheme exactness
 ;;; incorrectly.
 (defun exactp (number)
