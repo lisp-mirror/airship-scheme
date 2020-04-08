@@ -1,8 +1,8 @@
 Airship Scheme
 ==============
 
-A new r7rs Scheme implementation, designed to be run within a Common
-Lisp (CL) environment.
+A new r7rs Scheme implementation, designed to interoperate with a
+Common Lisp (CL) environment.
 
 Yes, [an "airship scheme" is a type of
 scheme](https://en.wikipedia.org/wiki/Imperial_Airship_Scheme)!

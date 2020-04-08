@@ -4,7 +4,7 @@
 
 (asdf:defsystem #:airship-scheme
   :serial t
-  :description "A new r7rs Scheme implementation, designed to be run within a Common Lisp environment."
+  :description "A new r7rs Scheme implementation, designed to interoperate with a Common Lisp environment."
   :version "0.0.0.0"
   :author "Michael Babich"
   :maintainer "Michael Babich"
