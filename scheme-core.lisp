@@ -21,6 +21,12 @@ known as #t or #f
   "A Scheme vector is just a T vector"
   `simple-vector)
 
+(deftype exact ()
+  `(or rational (complex rational)))
+
+(deftype inexact ()
+  `(or float (complex float)))
+
 (define-function (nil-to-false :inline t) (item)
   "
 Handles the result of a CL predicate, which uses NIL as its false
@@ -79,8 +85,8 @@ in a form that CL expects.
 (define-function eqv? (x y)
   (typecase x
     (symbol (typecase y (symbol (%symbol= x y))))
-    ;; TODO: Both x and y must be exact, or both must be inexact
-    (number (typecase y (number (= x y))))
+    (inexact (typecase y (inexact (= x y))))
+    (exact (typecase y (exact (= x y))))
     (character (typecase y (character (char= x y))))
     (t (eq x y))))
 
@@ -89,14 +95,13 @@ in a form that CL expects.
 ;;; TODO: recursively compare sequences
 ;; (define-function equal? (x y))
 
-;;; TODO: fixme: This old function might be defining Scheme exactness
-;;; incorrectly.
 (defun exactp (number)
   "Tests if a number is exact"
-  (cond ((rationalp number) t)
-        ((complexp number) (and (rationalp (realpart number))
-                                (rationalp (imagpart number))))
-        (t nil)))
+  (typep number 'exact))
+
+(defun inexactp (number)
+  "Tests if a number is exact"
+  (typep number 'inexact))
 
 (define-function (scheme-boolean-p :inline t) (object)
   "Tests if an object is either a Scheme #t or a Scheme #f"

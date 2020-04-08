@@ -63,7 +63,7 @@
   (exactp z))
 
 (define-scheme-predicate (inexact? z)
-  (not (exactp z)))
+  (inexactp z))
 
 (define-scheme-predicate (exact-integer? z)
   (integerp z))
