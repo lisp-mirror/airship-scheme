@@ -22,9 +22,11 @@ known as #t or #f
   `simple-vector)
 
 (deftype exact ()
+  "An exact number might be real or complex, but is not a float."
   `(or rational (complex rational)))
 
 (deftype inexact ()
+  "An inexact number is just a float, real or complex."
   `(or float (complex float)))
 
 (define-function (nil-to-false :inline t) (item)
@@ -100,7 +102,7 @@ in a form that CL expects.
   (typep number 'exact))
 
 (defun inexactp (number)
-  "Tests if a number is exact"
+  "Tests if a number is inexact"
   (typep number 'inexact))
 
 (define-function (scheme-boolean-p :inline t) (object)
