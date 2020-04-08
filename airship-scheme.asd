@@ -20,5 +20,6 @@
                (:file "scheme-boolean")
                (:file "scheme-string")
                (:file "scheme-core")
+               (:file "scheme-write")
                (:file "scheme-read")
                (:file "standard-procedures")))

@@ -258,13 +258,13 @@
 
 ;;; Input and output
 
-;;; TODO: These require a Scheme reader and a Scheme writer. That is,
-;;; the second must read any Scheme number in string form and the
-;;; first must write any Scheme number in the same form that Scheme
-;;; expects, which isn't quite the same as CL's.
+(define-scheme-procedure (number->string z &optional (radix 10))
+  (with-output-to-string (out)
+    (write-scheme-number z out radix)))
+
+;;; TODO: requires the scheme reader
 ;;;
-;;; (number->string z &optional radix)
-;;; (string->number string &optional radix)
+;;; (string->number string &optional (radix 10))
 
 ;;;; 6.3 - Booleans
 
