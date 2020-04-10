@@ -2,200 +2,200 @@
 
 ## SRFIs
 
-| [SRFI]     | Status?        | [R7RS-large] name       |
-| ---------- | :------------: | ----------------------- |
-| [SRFI 0]   |                |                         |
-| [SRFI 1]   | Unimplemented  | `(scheme list)`         |
-| [SRFI 2]   |                |                         |
-| [SRFI 3]   | Withdrawn      |                         |
-| [SRFI 4]   |                |                         |
-| [SRFI 5]   |                |                         |
-| [SRFI 6]   |                |                         |
-| [SRFI 7]   |                |                         |
-| [SRFI 8]   |                |                         |
-| [SRFI 9]   |                |                         |
-| [SRFI 10]  |                |                         |
-| [SRFI 11]  |                |                         |
-| [SRFI 12]  | Withdrawn      |                         |
-| [SRFI 13]  |                |                         |
-| [SRFI 14]  | Unimplemented  | `(scheme charset)`      |
-| [SRFI 15]  | Withdrawn      |                         |
-| [SRFI 16]  |                |                         |
-| [SRFI 17]  |                |                         |
-| [SRFI 18]  |                |                         |
-| [SRFI 19]  |                |                         |
-| [SRFI 20]  | Withdrawn      |                         |
-| [SRFI 21]  |                |                         |
-| [SRFI 22]  |                |                         |
-| [SRFI 23]  |                |                         |
-| [SRFI 24]  | Withdrawn      |                         |
-| [SRFI 25]  |                |                         |
-| [SRFI 26]  |                |                         |
-| [SRFI 27]  |                |                         |
-| [SRFI 28]  |                |                         |
-| [SRFI 29]  |                |                         |
-| [SRFI 30]  |                |                         |
-| [SRFI 31]  |                |                         |
-| [SRFI 32]  | Withdrawn      |                         |
-| [SRFI 33]  | Withdrawn      |                         |
-| [SRFI 34]  |                |                         |
-| [SRFI 35]  |                |                         |
-| [SRFI 36]  |                |                         |
-| [SRFI 37]  |                |                         |
-| [SRFI 38]  |                |                         |
-| [SRFI 39]  |                |                         |
-| [SRFI 40]  | Withdrawn      |                         |
-| [SRFI 41]  | Unimplemented  | `(scheme stream)`       |
-| [SRFI 42]  |                |                         |
-| [SRFI 43]  | use [SRFI 133] |                         |
-| [SRFI 44]  |                |                         |
-| [SRFI 45]  |                |                         |
-| [SRFI 46]  |                |                         |
-| [SRFI 47]  |                |                         |
-| [SRFI 48]  |                |                         |
-| [SRFI 49]  |                |                         |
-| [SRFI 50]  | Withdrawn      |                         |
-| [SRFI 51]  |                |                         |
-| [SRFI 52]  | Withdrawn      |                         |
-| [SRFI 53]  | Withdrawn      |                         |
-| [SRFI 54]  |                |                         |
-| [SRFI 55]  |                |                         |
-| [SRFI 56]  | Withdrawn      |                         |
-| [SRFI 57]  |                |                         |
-| [SRFI 58]  |                |                         |
-| [SRFI 59]  |                |                         |
-| [SRFI 60]  |                |                         |
-| [SRFI 61]  |                |                         |
-| [SRFI 62]  |                |                         |
-| [SRFI 63]  |                |                         |
-| [SRFI 64]  |                |                         |
-| [SRFI 65]  | Withdrawn      |                         |
-| [SRFI 66]  |                |                         |
-| [SRFI 67]  |                |                         |
-| [SRFI 68]  | Withdrawn      |                         |
-| [SRFI 69]  |                |                         |
-| [SRFI 70]  |                |                         |
-| [SRFI 71]  |                |                         |
-| [SRFI 72]  |                |                         |
-| [SRFI 73]  | Withdrawn      |                         |
-| [SRFI 74]  |                |                         |
-| [SRFI 75]  | Withdrawn      |                         |
-| [SRFI 76]  | Withdrawn      |                         |
-| [SRFI 77]  | Withdrawn      |                         |
-| [SRFI 78]  |                |                         |
-| [SRFI 79]  | Withdrawn      |                         |
-| [SRFI 80]  | Withdrawn      |                         |
-| [SRFI 81]  | Withdrawn      |                         |
-| [SRFI 82]  | Withdrawn      |                         |
-| [SRFI 83]  | Withdrawn      |                         |
-| [SRFI 84]  | Withdrawn      |                         |
-| [SRFI 85]  | Withdrawn      |                         |
-| [SRFI 86]  |                |                         |
-| [SRFI 87]  |                |                         |
-| [SRFI 88]  |                |                         |
-| [SRFI 89]  |                |                         |
-| [SRFI 90]  |                |                         |
-| [SRFI 91]  | Withdrawn      |                         |
-| [SRFI 92]  | Withdrawn      |                         |
-| [SRFI 93]  | Withdrawn      |                         |
-| [SRFI 94]  |                |                         |
-| [SRFI 95]  |                |                         |
-| [SRFI 96]  |                |                         |
-| [SRFI 97]  |                |                         |
-| [SRFI 98]  |                |                         |
-| [SRFI 99]  |                |                         |
-| [SRFI 100] |                |                         |
-| [SRFI 101] | Unimplemented  | `(scheme rlist)`        |
-| [SRFI 102] | Withdrawn      |                         |
-| [SRFI 103] | Withdrawn      |                         |
-| [SRFI 104] | Withdrawn      |                         |
-| [SRFI 105] |                |                         |
-| [SRFI 106] |                |                         |
-| [SRFI 107] |                |                         |
-| [SRFI 108] |                |                         |
-| [SRFI 109] |                |                         |
-| [SRFI 110] |                |                         |
-| [SRFI 111] | Unimplemented  | `(scheme box)`          |
-| [SRFI 112] |                |                         |
-| [SRFI 113] | Unimplemented  |                         |
-| [SRFI 114] | Withdrawn      |                         |
-| [SRFI 115] | Unimplemented  | `(scheme regex)`        |
-| [SRFI 116] | Unimplemented  | `(scheme ilist)`        |
-| [SRFI 117] | Unimplemented  | `(scheme list-queue)`   |
-| [SRFI 118] |                |                         |
-| [SRFI 119] |                |                         |
-| [SRFI 120] |                |                         |
-| [SRFI 121] | Withdrawn      |                         |
-| [SRFI 122] |                |                         |
-| [SRFI 123] |                |                         |
-| [SRFI 124] | Unimplemented  | `(scheme ephemeron)`    |
-| [SRFI 125] | Unimplemented  | `(scheme hash-table)`   |
-| [SRFI 126] |                |                         |
-| [SRFI 127] | Unimplemented  | `(scheme lseq)`         |
-| [SRFI 128] | Unimplemented  | `(scheme comparator)`   |
-| [SRFI 129] |                |                         |
-| [SRFI 130] |                |                         |
-| [SRFI 131] |                |                         |
-| [SRFI 132] | Unimplemented  | `(scheme sort)`         |
-| [SRFI 133] | Unimplemented  | `(scheme vector)`       |
-| [SRFI 134] | Unimplemented  | `(scheme ideque)`       |
-| [SRFI 135] | Unimplemented  | `(scheme text)`         |
-| [SRFI 136] |                |                         |
-| [SRFI 137] |                |                         |
-| [SRFI 138] |                |                         |
-| [SRFI 139] |                |                         |
-| [SRFI 140] |                |                         |
-| [SRFI 141] | Unimplemented  | `(scheme division)`     |
-| [SRFI 142] | Withdrawn      |                         |
-| [SRFI 143] | Unimplemented  | `(scheme fixnum)`       |
-| [SRFI 144] | Unimplemented  | `(scheme flonum)`       |
-| [SRFI 145] |                |                         |
-| [SRFI 146] | Unimplemented  | `(scheme mapping)`      |
-|            | Unimplemented  | `(scheme mapping hash)` |
-| [SRFI 147] |                |                         |
-| [SRFI 148] |                |                         |
-| [SRFI 149] |                |                         |
-| [SRFI 150] |                |                         |
-| [SRFI 151] | Unimplemented  | `(scheme bitwise)`      |
-| [SRFI 152] |                |                         |
-| [SRFI 153] | Withdrawn      |                         |
-| [SRFI 154] |                |                         |
-| [SRFI 155] |                |                         |
-| [SRFI 156] |                |                         |
-| [SRFI 157] |                |                         |
-| [SRFI 158] | Unimplemented  | `(scheme generator)`    |
-| [SRFI 159] | Unimplemented  | `(scheme show)`         |
-| [SRFI 160] | Unimplemented  | `(scheme vector @)`     |
-| [SRFI 161] |                |                         |
-| [SRFI 162] |                |                         |
-| [SRFI 163] |                |                         |
-| [SRFI 164] |                |                         |
-| [SRFI 165] |                |                         |
-| [SRFI 166] | Draft          |                         |
-| [SRFI 167] |                |                         |
-| [SRFI 168] |                |                         |
-| [SRFI 169] |                |                         |
-| [SRFI 170] | Draft          |                         |
-| [SRFI 171] |                |                         |
-| [SRFI 172] | Implemented    |                         |
-| [SRFI 173] |                |                         |
-| [SRFI 174] |                |                         |
-| [SRFI 175] |                |                         |
-| [SRFI 176] |                |                         |
-| [SRFI 177] | Draft          |                         |
-| [SRFI 178] | Draft          |                         |
-| [SRFI 179] | Draft          |                         |
-| [SRFI 180] | Draft          |                         |
-| [SRFI 181] | Draft          |                         |
-| [SRFI 182] | Withdrawn      |                         |
-| [SRFI 183] | Withdrawn      |                         |
-| [SRFI 184] | Withdrawn      |                         |
-| [SRFI 185] | Draft          |                         |
-| [SRFI 186] | Draft          |                         |
-| [SRFI 187] | Withdrawn      |                         |
-| [SRFI 188] | Draft          |                         |
-| [SRFI 189] | Draft          |                         |
-| [SRFI 190] | Draft          |                         |
+| [SRFI]     | Status?                  | [R7RS-large] name       |
+| ---------- | :----------------------: | ----------------------- |
+| [SRFI 0]   | replaced by [R7RS-small] |                         |
+| [SRFI 1]   | Unimplemented            | `(scheme list)`         |
+| [SRFI 2]   |                          |                         |
+| [SRFI 3]   | Withdrawn                |                         |
+| [SRFI 4]   |                          |                         |
+| [SRFI 5]   |                          |                         |
+| [SRFI 6]   | [R7RS-small]             |                         |
+| [SRFI 7]   |                          |                         |
+| [SRFI 8]   |                          |                         |
+| [SRFI 9]   | [R7RS-small]             |                         |
+| [SRFI 10]  |                          |                         |
+| [SRFI 11]  |                          |                         |
+| [SRFI 12]  | Withdrawn                |                         |
+| [SRFI 13]  |                          |                         |
+| [SRFI 14]  | Unimplemented            | `(scheme charset)`      |
+| [SRFI 15]  | Withdrawn                |                         |
+| [SRFI 16]  |                          |                         |
+| [SRFI 17]  |                          |                         |
+| [SRFI 18]  |                          |                         |
+| [SRFI 19]  |                          |                         |
+| [SRFI 20]  | Withdrawn                |                         |
+| [SRFI 21]  |                          |                         |
+| [SRFI 22]  |                          |                         |
+| [SRFI 23]  |                          |                         |
+| [SRFI 24]  | Withdrawn                |                         |
+| [SRFI 25]  |                          |                         |
+| [SRFI 26]  |                          |                         |
+| [SRFI 27]  |                          |                         |
+| [SRFI 28]  |                          |                         |
+| [SRFI 29]  |                          |                         |
+| [SRFI 30]  | [R7RS-small]             |                         |
+| [SRFI 31]  |                          |                         |
+| [SRFI 32]  | Withdrawn                |                         |
+| [SRFI 33]  | Withdrawn                |                         |
+| [SRFI 34]  |                          |                         |
+| [SRFI 35]  |                          |                         |
+| [SRFI 36]  |                          |                         |
+| [SRFI 37]  |                          |                         |
+| [SRFI 38]  | [R7RS-small]             |                         |
+| [SRFI 39]  |                          |                         |
+| [SRFI 40]  | Withdrawn                |                         |
+| [SRFI 41]  | Unimplemented            | `(scheme stream)`       |
+| [SRFI 42]  |                          |                         |
+| [SRFI 43]  | use [SRFI 133]           |                         |
+| [SRFI 44]  |                          |                         |
+| [SRFI 45]  |                          |                         |
+| [SRFI 46]  |                          |                         |
+| [SRFI 47]  |                          |                         |
+| [SRFI 48]  |                          |                         |
+| [SRFI 49]  |                          |                         |
+| [SRFI 50]  | Withdrawn                |                         |
+| [SRFI 51]  |                          |                         |
+| [SRFI 52]  | Withdrawn                |                         |
+| [SRFI 53]  | Withdrawn                |                         |
+| [SRFI 54]  |                          |                         |
+| [SRFI 55]  |                          |                         |
+| [SRFI 56]  | Withdrawn                |                         |
+| [SRFI 57]  |                          |                         |
+| [SRFI 58]  |                          |                         |
+| [SRFI 59]  |                          |                         |
+| [SRFI 60]  |                          |                         |
+| [SRFI 61]  |                          |                         |
+| [SRFI 62]  | [R7RS-small]             |                         |
+| [SRFI 63]  |                          |                         |
+| [SRFI 64]  |                          |                         |
+| [SRFI 65]  | Withdrawn                |                         |
+| [SRFI 66]  |                          |                         |
+| [SRFI 67]  |                          |                         |
+| [SRFI 68]  | Withdrawn                |                         |
+| [SRFI 69]  |                          |                         |
+| [SRFI 70]  |                          |                         |
+| [SRFI 71]  |                          |                         |
+| [SRFI 72]  |                          |                         |
+| [SRFI 73]  | Withdrawn                |                         |
+| [SRFI 74]  |                          |                         |
+| [SRFI 75]  | Withdrawn                |                         |
+| [SRFI 76]  | Withdrawn                |                         |
+| [SRFI 77]  | Withdrawn                |                         |
+| [SRFI 78]  |                          |                         |
+| [SRFI 79]  | Withdrawn                |                         |
+| [SRFI 80]  | Withdrawn                |                         |
+| [SRFI 81]  | Withdrawn                |                         |
+| [SRFI 82]  | Withdrawn                |                         |
+| [SRFI 83]  | Withdrawn                |                         |
+| [SRFI 84]  | Withdrawn                |                         |
+| [SRFI 85]  | Withdrawn                |                         |
+| [SRFI 86]  |                          |                         |
+| [SRFI 87]  | [R7RS-small]             |                         |
+| [SRFI 88]  |                          |                         |
+| [SRFI 89]  |                          |                         |
+| [SRFI 90]  |                          |                         |
+| [SRFI 91]  | Withdrawn                |                         |
+| [SRFI 92]  | Withdrawn                |                         |
+| [SRFI 93]  | Withdrawn                |                         |
+| [SRFI 94]  |                          |                         |
+| [SRFI 95]  |                          |                         |
+| [SRFI 96]  |                          |                         |
+| [SRFI 97]  |                          |                         |
+| [SRFI 98]  | [R7RS-small]             |                         |
+| [SRFI 99]  |                          |                         |
+| [SRFI 100] |                          |                         |
+| [SRFI 101] | Unimplemented            | `(scheme rlist)`        |
+| [SRFI 102] | Withdrawn                |                         |
+| [SRFI 103] | Withdrawn                |                         |
+| [SRFI 104] | Withdrawn                |                         |
+| [SRFI 105] |                          |                         |
+| [SRFI 106] |                          |                         |
+| [SRFI 107] |                          |                         |
+| [SRFI 108] |                          |                         |
+| [SRFI 109] |                          |                         |
+| [SRFI 110] |                          |                         |
+| [SRFI 111] | Unimplemented            | `(scheme box)`          |
+| [SRFI 112] |                          |                         |
+| [SRFI 113] | Unimplemented            | `(scheme set)`          |
+| [SRFI 114] | Withdrawn                |                         |
+| [SRFI 115] | Unimplemented            | `(scheme regex)`        |
+| [SRFI 116] | Unimplemented            | `(scheme ilist)`        |
+| [SRFI 117] | Unimplemented            | `(scheme list-queue)`   |
+| [SRFI 118] |                          |                         |
+| [SRFI 119] |                          |                         |
+| [SRFI 120] |                          |                         |
+| [SRFI 121] | Withdrawn                |                         |
+| [SRFI 122] |                          |                         |
+| [SRFI 123] |                          |                         |
+| [SRFI 124] | Unimplemented            | `(scheme ephemeron)`    |
+| [SRFI 125] | Unimplemented            | `(scheme hash-table)`   |
+| [SRFI 126] |                          |                         |
+| [SRFI 127] | Unimplemented            | `(scheme lseq)`         |
+| [SRFI 128] | Unimplemented            | `(scheme comparator)`   |
+| [SRFI 129] |                          |                         |
+| [SRFI 130] |                          |                         |
+| [SRFI 131] |                          |                         |
+| [SRFI 132] | Unimplemented            | `(scheme sort)`         |
+| [SRFI 133] | Unimplemented            | `(scheme vector)`       |
+| [SRFI 134] | Unimplemented            | `(scheme ideque)`       |
+| [SRFI 135] | Unimplemented            | `(scheme text)`         |
+| [SRFI 136] |                          |                         |
+| [SRFI 137] |                          |                         |
+| [SRFI 138] |                          |                         |
+| [SRFI 139] |                          |                         |
+| [SRFI 140] |                          |                         |
+| [SRFI 141] | Unimplemented            | `(scheme division)`     |
+| [SRFI 142] | Withdrawn                |                         |
+| [SRFI 143] | Unimplemented            | `(scheme fixnum)`       |
+| [SRFI 144] | Unimplemented            | `(scheme flonum)`       |
+| [SRFI 145] |                          |                         |
+| [SRFI 146] | Unimplemented            | `(scheme mapping)`      |
+|            | Unimplemented            | `(scheme mapping hash)` |
+| [SRFI 147] |                          |                         |
+| [SRFI 148] |                          |                         |
+| [SRFI 149] |                          |                         |
+| [SRFI 150] |                          |                         |
+| [SRFI 151] | Unimplemented            | `(scheme bitwise)`      |
+| [SRFI 152] |                          |                         |
+| [SRFI 153] | Withdrawn                |                         |
+| [SRFI 154] |                          |                         |
+| [SRFI 155] |                          |                         |
+| [SRFI 156] |                          |                         |
+| [SRFI 157] |                          |                         |
+| [SRFI 158] | Unimplemented            | `(scheme generator)`    |
+| [SRFI 159] | Unimplemented            | `(scheme show)`         |
+| [SRFI 160] | Unimplemented            | `(scheme vector @)`     |
+| [SRFI 161] |                          |                         |
+| [SRFI 162] |                          |                         |
+| [SRFI 163] |                          |                         |
+| [SRFI 164] |                          |                         |
+| [SRFI 165] |                          |                         |
+| [SRFI 166] | Draft                    |                         |
+| [SRFI 167] |                          |                         |
+| [SRFI 168] |                          |                         |
+| [SRFI 169] |                          |                         |
+| [SRFI 170] | Draft                    |                         |
+| [SRFI 171] |                          |                         |
+| [SRFI 172] | Implemented              |                         |
+| [SRFI 173] |                          |                         |
+| [SRFI 174] |                          |                         |
+| [SRFI 175] |                          |                         |
+| [SRFI 176] |                          |                         |
+| [SRFI 177] | Draft                    |                         |
+| [SRFI 178] | Draft                    |                         |
+| [SRFI 179] | Draft                    |                         |
+| [SRFI 180] | Draft                    |                         |
+| [SRFI 181] | Draft                    |                         |
+| [SRFI 182] | Withdrawn                |                         |
+| [SRFI 183] | Withdrawn                |                         |
+| [SRFI 184] | Withdrawn                |                         |
+| [SRFI 185] | Draft                    |                         |
+| [SRFI 186] | Draft                    |                         |
+| [SRFI 187] | Withdrawn                |                         |
+| [SRFI 188] | Draft                    |                         |
+| [SRFI 189] | Draft                    |                         |
+| [SRFI 190] | Draft                    |                         |
 
 ## Non-SRFIs in R7RS-large
 
@@ -212,6 +212,7 @@
 | [SRFI 41]          | Unimplemented  | `(scheme stream)`       |
 | [SRFI 101]         | Unimplemented  | `(scheme rlist)`        |
 | [SRFI 111]         | Unimplemented  | `(scheme box)`          |
+| [SRFI 113]         | Unimplemented  | `(scheme set)`          |
 | [SRFI 115]         | Unimplemented  | `(scheme regex)`        |
 | [SRFI 116]         | Unimplemented  | `(scheme ilist)`        |
 | [SRFI 117]         | Unimplemented  | `(scheme list-queue)`   |
@@ -234,6 +235,7 @@
 | [SRFI 160]         | Unimplemented  | `(scheme vector @)`     |
 | [R6RS bytevectors] | Unimplemented  | `(scheme bytevector)`   |
 
+[R7RS-small]: https://small.r7rs.org/attachment/r7rs.pdf
 [R7RS-large]: https://bitbucket.org/cowan/r7rs-wg1-infra/src/default/R7RSHomePage.md
 [SRFI]: https://srfi.schemers.org/
 [SRFI 0]: https://srfi.schemers.org/srfi-0/srfi-0.html
