@@ -7,10 +7,6 @@
 
 (in-package #:airship-scheme)
 
-(deftype scheme-string ()
-  "A Scheme string is just a simple string."
-  'simple-string)
-
 (define-function (digit-value :inline t) (char)
   #+sbcl
   (sb-unicode:numeric-value char)

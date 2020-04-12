@@ -18,6 +18,7 @@
                :zr-utils)
   :components ((:file "package")
                (:file "scheme-boolean")
+               (:file "scheme-types")
                (:file "scheme-string")
                (:file "scheme-core")
                (:file "scheme-write")
