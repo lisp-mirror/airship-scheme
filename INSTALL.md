@@ -48,12 +48,22 @@ be required to install the up-to-date git version of Airship Scheme,
 which will override the version in Quicklisp.*
 
 Download this git repository and make it recognizable to Quicklisp as
-a "local project" in `~/quicklisp/local-projects/`.
+a "local project" in your local projects directory, which might be
+located at `~/quicklisp/local-projects/`.
 
 Instructions on how to make airship-scheme a Quicklisp local project
 are available
 [here](https://www.quicklisp.org/beta/faq.html#local-project) and
 [here](http://blog.quicklisp.org/2018/01/the-quicklisp-local-projects-mechanism.html).
+
+The dependency `zr-utils` also needs to be downloaded. Everything else
+is in Quicklisp. The fastest way to do so is to go to your
+`local-projects` directory and run:
+
+```sh
+git clone https://gitlab.com/zombie-raptor/zr-utils.git
+git clone https://gitlab.com/mbabich/airship-scheme.git
+```
 
 **Note:** You can create a symbolic link to the project directory in
 the Quicklisp local-projects directory. Quicklisp will follow links in
