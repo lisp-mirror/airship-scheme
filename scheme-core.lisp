@@ -51,11 +51,11 @@ in a form that CL expects.
 
 (define-function (nanp :inline t) ((number number))
   "Tests if a number is NaN"
-  (and (floatp number) (float-features:float-nan-p number)))
+  (and (floatp number) (f:float-nan-p number)))
 
 (define-function (infinitep :inline t) ((number number))
   "Tests if a number is an infinity"
-  (and (floatp number) (float-features:float-infinity-p number)))
+  (and (floatp number) (f:float-infinity-p number)))
 
 (define-function (finitep :inline t) ((number number))
   "Tests if a number is both not NaN and not an infinity"

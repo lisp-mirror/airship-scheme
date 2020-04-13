@@ -340,7 +340,7 @@
   (null obj))
 
 (define-scheme-predicate (list? obj)
-  (proper-list-p obj))
+  (a:proper-list-p obj))
 
 (define-scheme-procedure (make-list k &optional fill)
   (if fill
@@ -641,10 +641,10 @@
   (apply #'concatenate '(simple-array (unsigned-byte 8) (*)) bytevector))
 
 (define-scheme-procedure (utf8->string bytevector &optional (start 0) end)
-  (octets-to-string bytevector :start start :end end))
+  (b:octets-to-string bytevector :start start :end end))
 
 (define-scheme-procedure (string->utf8 string &optional (start 0) end)
-  (string-to-octets string :start start :end end))
+  (b:string-to-octets string :start start :end end))
 
 ;;;; 6.10 Control features
 
