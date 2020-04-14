@@ -7,6 +7,18 @@
 
 (in-package #:airship-scheme)
 
+(define-function (utf8-to-string :inline t) (octets &key (start 0) end)
+  (octets-to-string octets
+                    :start start
+                    :end end
+                    #+sbcl :external-format #-sbcl :encoding :utf-8))
+
+(define-function (string-to-utf8 :inline t) (string &key (start 0) end)
+  (string-to-octets string
+                    :start start
+                    :end end
+                    #+sbcl :external-format #-sbcl :encoding :utf-8))
+
 (define-function (digit-value :inline t) (char)
   #+sbcl
   (sb-unicode:numeric-value char)

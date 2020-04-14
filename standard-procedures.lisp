@@ -641,10 +641,10 @@
   (apply #'concatenate '(simple-array (unsigned-byte 8) (*)) bytevector))
 
 (define-scheme-procedure (utf8->string bytevector &optional (start 0) end)
-  (b:octets-to-string bytevector :start start :end end))
+  (utf8-to-string bytevector :start start :end end))
 
 (define-scheme-procedure (string->utf8 string &optional (start 0) end)
-  (b:string-to-octets string :start start :end end))
+  (string-to-utf8 string :start start :end end))
 
 ;;;; 6.10 Control features
 
