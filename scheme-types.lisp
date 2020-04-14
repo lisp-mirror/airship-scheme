@@ -50,3 +50,19 @@ known as #t or #f
   (and object
        (symbolp object)
        (not (scheme-boolean-p object))))
+
+;;;; Type Conversion
+
+(define-function (inexact :inline t) ((z number))
+  (etypecase z
+    ((and complex exact) (coerce z '(complex double-float)))
+    (exact (coerce z 'double-float))
+    (number z)))
+
+;;; TODO: use a closer rational than `round' gives.
+(define-function (exact :inline t) ((z number))
+  (etypecase z
+    ((and complex inexact) (complex (round (realpart z))
+                                    (round (imagpart z))))
+    (inexact (values (round z)))
+    (number z)))

@@ -246,15 +246,18 @@
   (phase z))
 
 (define-scheme-procedure (inexact z)
-  (if (complexp z)
-      (coerce z '(complex double-float))
-      (coerce z 'double-float)))
+  (inexact z))
 
 (define-scheme-procedure (exact z)
-  (if (complexp z)
-      (complex (round (realpart z))
-               (round (imagpart z)))
-      (round z)))
+  (exact z))
+
+;;; R5RS
+
+(define-scheme-procedure (exact->inexact z)
+  (inexact z))
+
+(define-scheme-procedure (inexact->exact z)
+  (exact z))
 
 ;;; Input and output
 
