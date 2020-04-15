@@ -136,7 +136,7 @@
   (floor n1 n2))
 
 (define-scheme-procedure (floor-quotient n1 n2)
-  (nth-value 0 (floor n1 n2)))
+  (values (floor n1 n2)))
 
 (define-scheme-procedure (floor-remainder n1 n2)
   (mod n1 n2))
@@ -145,13 +145,13 @@
   (truncate n1 n2))
 
 (define-scheme-procedure (truncate-quotient n1 n2)
-  (nth-value 0 (truncate n1 n2)))
+  (values (truncate n1 n2)))
 
 (define-scheme-procedure (truncate-remainder n1 n2)
   (rem n1 n2))
 
 (define-scheme-procedure (quotient n1 n2)
-  (nth-value 0 (truncate n1 n2)))
+  (values (truncate n1 n2)))
 
 (define-scheme-procedure (remainder n1 n2)
   (rem n1 n2))
@@ -172,16 +172,16 @@
   (denominator q))
 
 (define-scheme-procedure (floor x)
-  (nth-value 0 (floor x)))
+  (values (floor x)))
 
 (define-scheme-procedure (ceiling x)
-  (nth-value 0 (ceiling x)))
+  (values (ceiling x)))
 
 (define-scheme-procedure (truncate x)
-  (nth-value 0 (truncate x)))
+  (values (truncate x)))
 
 (define-scheme-procedure (round x)
-  (nth-value 0 (round x)))
+  (values (round x)))
 
 ;;; (rationalize x y)
 
