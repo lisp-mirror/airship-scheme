@@ -8,9 +8,17 @@
   "An exact number might be real or complex, but is not a float."
   `(or rational (complex rational)))
 
+(deftype exact-integer ()
+  "An exact-integer in Scheme is just a CL integer."
+  `integer)
+
 (deftype inexact ()
   "An inexact number is just a float, real or complex."
   `(or float (complex float)))
+
+(deftype flonum ()
+  "A Scheme flonum is just a double-float."
+  'double-float)
 
 (deftype scheme-boolean ()
   "
