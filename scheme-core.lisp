@@ -100,7 +100,7 @@ in a form that CL expects.
     (t `(&rest ,list))))
 
 ;;; TODO: The external-to-CL versions of these procedures should call
-;;; the function within the trampoline with #'identity as the
+;;; the function within the trampoline with #'values as the
 ;;; continuation.
 (defmacro %define-scheme-procedure ((name continuation &rest scheme-lambda-list) &body body)
   "

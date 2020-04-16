@@ -219,6 +219,7 @@
 (define-scheme-procedure (sqrt x)
   (sqrt x))
 
+;;; Note: Call with #'values, not with #'identity.
 (define-scheme-procedure (exact-integer-sqrt k)
   (let* ((s (isqrt k))
          (r (- k (expt s 2))))
