@@ -67,10 +67,13 @@ known as #t or #f
     (exact (coerce z 'double-float))
     (number z)))
 
-;;; TODO: use a closer rational than `round' gives.
+;;; This uses rationalize. cl:rationalize is not the same thing as
+;;; Scheme's rationalize. Racket's inexact->exact behaves more like
+;;; cl:rational instead, but rationalize produces less surprising
+;;; fractions.
 (define-function (exact :inline t) ((z number))
   (etypecase z
-    ((and complex inexact) (complex (round (realpart z))
-                                    (round (imagpart z))))
-    (inexact (values (round z)))
+    ((and complex inexact) (complex (rationalize (realpart z))
+                                    (rationalize (imagpart z))))
+    (inexact (rationalize z))
     (number z)))
