@@ -97,6 +97,7 @@ in a form that CL expects.
                             `(&rest ,rest)
                             rest)))
                 :collect (car sublist)))
+    (null nil)
     (t `(&rest ,list))))
 
 ;;; TODO: The external-to-CL versions of these procedures should call

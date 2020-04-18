@@ -763,6 +763,11 @@
 ;;; (emergency-exit &optional obj)
 ;;; (get-environment-variable &optional name)
 ;;; (current-second)
-;;; (current-jiffy)
-;;; (jiffies-per-second)
+
+(define-scheme-procedure (current-jiffy)
+  (get-internal-real-time))
+
+(define-scheme-procedure (jiffies-per-second)
+  internal-time-units-per-second)
+
 ;;; (features)
