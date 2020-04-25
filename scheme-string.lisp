@@ -113,8 +113,7 @@ Defines a short-circuiting predicate on an arbitrary-length list.
     (loop :for old-item := nil :then item
           :for item :in items
           :for match := t :then (funcall function old-item item)
-          :unless match :do (return nil)
-          :finally (return t)))
+          :always match))
   #+sbcl
   (define-function (compare-foldcase :inline t) ((function function) (strings list))
     "
@@ -127,8 +126,7 @@ list of strings, while doing a Unicode foldcase on each string.
           :for string :in strings
           :for string* := (string-foldcase string)
           :for match := t :then (funcall function old-string string*)
-          :unless match :do (return nil)
-          :finally (return t))))
+          :always match)))
 
 (defmacro define-string-predicate ((binary-name n-ary-name) binary-predicate &key foldcase)
   (let ((compare (if foldcase 'compare-foldcase 'compare)))
