@@ -576,7 +576,7 @@
   (apply #'vector obj))
 
 (define-scheme-procedure (vector-length vector)
-  (check-type vector simple-vector)
+  (check-type vector scheme-vector)
   (length vector))
 
 (define-scheme-procedure (vector-ref vector k)
@@ -586,27 +586,33 @@
   (setf (svref vector k) obj))
 
 (define-scheme-procedure (vector->list vector &optional start end)
+  (check-type vector scheme-vector)
   (coerce-subseq vector 'list start end))
 
 (define-scheme-procedure (list->vector list)
-  (coerce list 'simple-vector))
+  (coerce list 'scheme-vector))
 
 (define-scheme-procedure (vector->string vector &optional start end)
+  (check-type vector scheme-vector)
   (coerce-subseq vector 'string start end))
 
 (define-scheme-procedure (string->vector string &optional start end)
-  (coerce-subseq string 'vector start end))
+  (coerce-subseq string 'scheme-vector start end))
 
 (define-scheme-procedure (vector-copy vector &optional start end)
+  (check-type vector scheme-vector)
   (copy-seq-or-subseq vector start end))
 
 (define-scheme-procedure (vector-copy! to at from &optional (start 0) end)
+  (check-type to scheme-vector)
+  (check-type from scheme-vector)
   (replace to from :start1 at :start2 start :end2 end))
 
 (define-scheme-procedure (vector-append . vector)
   (apply #'concatenate 'simple-vector vector))
 
 (define-scheme-procedure (vector-fill! vector fill &optional (start 0) end)
+  (check-type vector scheme-vector)
   (fill vector fill :start start :end end))
 
 ;;;; 6.9 Bytevectors
@@ -639,12 +645,15 @@
   (copy-seq-or-subseq bytevector start end))
 
 (define-scheme-procedure (bytevector-copy! to at from &optional start end)
+  (check-type to bytevector)
+  (check-type from bytevector)
   (replace to from :start1 at :start2 start :end2 end))
 
 (define-scheme-procedure (bytevector-append . bytevector)
-  (apply #'concatenate '(simple-array (unsigned-byte 8) (*)) bytevector))
+  (apply #'concatenate 'bytevector bytevector))
 
 (define-scheme-procedure (utf8->string bytevector &optional (start 0) end)
+  (check-type bytevector bytevector)
   (utf8-to-string bytevector :start start :end end))
 
 (define-scheme-procedure (string->utf8 string &optional (start 0) end)
