@@ -346,10 +346,8 @@
 (define-scheme-predicate (list? obj)
   (a:proper-list-p obj))
 
-(define-scheme-procedure (make-list k &optional fill)
-  (if fill
-      (make-list k :initial-element fill)
-      (make-list k)))
+(define-scheme-procedure (make-list k &optional (fill nil))
+  (make-list k :initial-element fill))
 
 (define-scheme-procedure (list . obj)
   (apply #'list obj))
@@ -484,10 +482,8 @@
 (define-scheme-predicate (string? obj)
   (typep obj 'scheme-string))
 
-(define-scheme-procedure (make-string k &optional char)
-  (if char
-      (make-string k :initial-element char)
-      (make-string k)))
+(define-scheme-procedure (make-string k &optional (char #.(code-char 0)))
+  (make-string k :initial-element char))
 
 (define-scheme-procedure (string . char)
   (make-array (length char) :element-type 'character :initial-contents char))
@@ -567,10 +563,8 @@
 (define-scheme-predicate (vector? obj)
   (typep obj 'scheme-vector))
 
-(define-scheme-procedure (make-vector k &optional fill)
-  (if fill
-      (make-array k :initial-element fill)
-      (make-array k)))
+(define-scheme-procedure (make-vector k &optional (fill nil))
+  (make-array k :initial-element fill))
 
 (define-scheme-procedure (vector . obj)
   (apply #'vector obj))
@@ -620,13 +614,11 @@
 (define-scheme-predicate (bytevector? obj)
   (typep obj 'bytevector))
 
-(define-scheme-procedure (make-bytevector k &optional byte)
-  (if byte
-      (make-array k :element-type '(unsigned-byte 8) :initial-element byte)
-      (make-array k :element-type '(unsigned-byte 8))))
+(define-scheme-procedure (make-bytevector k &optional (byte 0))
+  (make-array k :element-type 'octet :initial-element byte))
 
 (define-scheme-procedure (bytevector . byte)
-  (make-array (length byte) :element-type '(unsigned-byte 8) :initial-contents byte))
+  (make-array (length byte) :element-type 'octet :initial-contents byte))
 
 (define-scheme-procedure (bytevector-length bytevector)
   (check-type bytevector bytevector)

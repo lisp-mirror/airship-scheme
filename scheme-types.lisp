@@ -37,7 +37,7 @@ known as #t or #f
 
 (deftype bytevector ()
   "A Scheme bytevector is just an octet vector"
-  `(simple-array octet))
+  `(simple-array octet (*)))
 
 ;;;; Type Predicates
 
