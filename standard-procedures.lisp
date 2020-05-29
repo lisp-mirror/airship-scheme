@@ -668,7 +668,9 @@
 (%define-scheme-procedure (call/cc continuation procedure)
   (multiple-value-call procedure continuation))
 
-;;; (values . objs)
+(define-scheme-procedure (values . objs)
+  (values-list objs))
+
 ;;; (call-with-values producer consumer)
 ;;; (dynamic-wind before thunk after)
 
@@ -699,13 +701,34 @@
 ;;; (call-with-port port proc)
 ;;; (call-with-input-file string proc)
 ;;; (call-with-output-file string proc)
-;;; (input-port? obj)
-;;; (output-port? obj)
-;;; (textual-port? obj)
-;;; (binary-port? obj)
-;;; (port? obj)
-;;; (input-port-open? port)
-;;; (output-port-open? port)
+
+(define-scheme-procedure (input-port? obj)
+  (input-stream-p obj))
+
+(define-scheme-procedure (output-port? obj)
+  (output-stream-p obj))
+
+(define-scheme-procedure (textual-port? obj)
+  (and (streamp obj)
+       (values (subtypep (stream-element-type obj)
+                         'character))))
+
+(define-scheme-procedure (binary-port? obj)
+  (and (streamp obj)
+       (values (subtypep (stream-element-type obj)
+                         'integer))))
+
+(define-scheme-procedure (port? obj)
+  (streamp obj))
+
+(define-scheme-procedure (input-port-open? port)
+  (and (input-stream-p port)
+       (open-stream-p port)))
+
+(define-scheme-procedure (output-port-open? port)
+  (and (output-stream-p port)
+       (open-stream-p port)))
+
 ;;; (current-input-port)
 ;;; (current-output-port)
 ;;; (current-error-port)
