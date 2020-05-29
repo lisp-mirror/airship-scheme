@@ -4,7 +4,7 @@
 
 | [SRFI]         | Status?                  | R7RS name                                   |
 | -------------- | :----------------------: | ------------------------------------------- |
-| [SRFI 0]       | replaced by [R7RS-small] |                                             |
+| [SRFI 0]       |                          | *replaced in [R7RS-small]*                  |
 | [SRFI 1]       | Unimplemented            | `(scheme list)`                             |
 | [SRFI 2]       |                          |                                             |
 | ~~[SRFI 3]~~   | *Withdrawn*              |                                             |
@@ -47,7 +47,7 @@
 | ~~[SRFI 40]~~  | *Withdrawn*              |                                             |
 | [SRFI 41]      | Unimplemented            | `(scheme stream)`                           |
 | [SRFI 42]      |                          |                                             |
-| [SRFI 43]      | use [SRFI 133]           |                                             |
+| [SRFI 43]      |                          | *R7RS uses [SRFI 133]*                      |
 | [SRFI 44]      |                          |                                             |
 | [SRFI 45]      |                          |                                             |
 | [SRFI 46]      |                          |                                             |
@@ -440,10 +440,10 @@
 [SRFI 188]: https://srfi.schemers.org/srfi-188/srfi-188.html
 [SRFI 189]: https://srfi.schemers.org/srfi-189/srfi-189.html
 [SRFI 190]: https://srfi.schemers.org/srfi-190/srfi-190.html
-[SRFI 191]: https://srfi.schemers.org/srfi-190/srfi-191.html
-[SRFI 192]: https://srfi.schemers.org/srfi-190/srfi-192.html
-[SRFI 193]: https://srfi.schemers.org/srfi-190/srfi-193.html
-[SRFI 194]: https://srfi.schemers.org/srfi-190/srfi-194.html
-[SRFI 195]: https://srfi.schemers.org/srfi-190/srfi-195.html
-[SRFI 196]: https://srfi.schemers.org/srfi-190/srfi-196.html
+[SRFI 191]: https://srfi.schemers.org/srfi-191/srfi-191.html
+[SRFI 192]: https://srfi.schemers.org/srfi-192/srfi-192.html
+[SRFI 193]: https://srfi.schemers.org/srfi-193/srfi-193.html
+[SRFI 194]: https://srfi.schemers.org/srfi-194/srfi-194.html
+[SRFI 195]: https://srfi.schemers.org/srfi-195/srfi-195.html
+[SRFI 196]: https://srfi.schemers.org/srfi-196/srfi-196.html
 [R6RS bytevectors]: http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-3.html#node_chap_2
