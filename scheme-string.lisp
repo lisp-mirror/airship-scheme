@@ -8,12 +8,14 @@
 (in-package #:airship-scheme)
 
 (define-function (utf8-to-string :inline t) (octets &key (start 0) end)
+  "Turns a bytevector of UTF8 octets into a string."
   (octets-to-string octets
                     :start start
                     :end end
                     #+sbcl :external-format #-sbcl :encoding :utf-8))
 
 (define-function (string-to-utf8 :inline t) (string &key (start 0) end)
+  "Turns a string into a bytevector of UTF8 octets."
   (string-to-octets string
                     :start start
                     :end end

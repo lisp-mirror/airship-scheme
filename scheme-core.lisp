@@ -2,8 +2,8 @@
 
 (in-package #:airship-scheme)
 
-;;; Symbols are read into this package.
 (defpackage #:r7rs
+  (:documentation "A package that the core R7RS symbols are read into.")
   (:use))
 
 (define-function (nil-to-false :inline t) (item)
@@ -47,6 +47,7 @@ in a form that CL expects.
   (eq symbol-1 symbol-2))
 
 (defun symbol= (&rest symbols)
+  "Tests if one or more symbols are equal to each other"
   (compare #'%symbol= symbols))
 
 (define-function (nanp :inline t) ((number number))
@@ -62,6 +63,10 @@ in a form that CL expects.
   (not (and (floatp number) (or (infinitep number) (nanp number)))))
 
 (define-function eqv? (x y)
+  "
+Tests if two objects are Scheme-equivalent to each other, using the
+rules provided in the r7rs-small specification.
+"
   (typecase x
     (symbol (typecase y (symbol (%symbol= x y))))
     (inexact (typecase y (inexact (= x y))))

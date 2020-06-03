@@ -62,16 +62,18 @@ known as #t or #f
 ;;;; Type Conversion
 
 (define-function (inexact :inline t) ((z number))
+  "Converts a number to a Scheme inexact."
   (etypecase z
     ((and complex exact) (coerce z '(complex double-float)))
     (exact (coerce z 'double-float))
     (number z)))
 
-;;; This uses rationalize. cl:rationalize is not the same thing as
-;;; Scheme's rationalize. Racket's inexact->exact behaves more like
+;;; Note: This uses rationalize. cl:rationalize is not the same thing
+;;; as Scheme's rationalize. Racket's inexact->exact behaves more like
 ;;; cl:rational instead, but rationalize produces less surprising
 ;;; fractions.
 (define-function (exact :inline t) ((z number))
+  "Converts a number to a Scheme exact."
   (etypecase z
     ((and complex inexact) (complex (rationalize (realpart z))
                                     (rationalize (imagpart z))))
