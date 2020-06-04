@@ -22,15 +22,21 @@
                     #+sbcl :external-format #-sbcl :encoding :utf-8))
 
 (define-function (digit-value :inline t) (char)
+  "
+Convert a digit character into the number it represents. For other
+characters, return NIL.
+"
   #+sbcl
   (sb-unicode:numeric-value char)
   #-sbcl
   (digit-char-p char))
 
 (define-function (char-numeric-p :inline t) (char)
+  "Test to see if a character is numeric."
   (and (digit-value char) t))
 
 (define-function (char-alphabetic-p :inline t) (char)
+  "Test to see if a character is alphabetic."
   #+sbcl
   (sb-unicode:alphabetic-p char)
   #-sbcl
@@ -41,6 +47,7 @@
 ;;; requiring calls to a Unicode library. Unfortunately, CL has no
 ;;; whitespace test built in.
 (define-function (char-whitespace-p :inline t) (char)
+  "Test to see if a character represents whitespace."
   #+sbcl
   (and (sb-unicode:whitespace-p char) t)
   #-sbcl
@@ -49,18 +56,21 @@
       (char= char #\Tab)))
 
 (define-function (char-upper-case-p :inline t) (letter)
+  "Test to see if a character is upper case."
   #+sbcl
   (sb-unicode:uppercase-p letter)
   #-sbcl
   (upper-case-p letter))
 
 (define-function (char-lower-case-p :inline t) (letter)
+  "Test to see if a character is lower case."
   #+sbcl
   (sb-unicode:lowercase-p letter)
   #-sbcl
   (lower-case-p letter))
 
 (define-function (char-upcase* :inline t) ((char character))
+  "Upcase a character by Unicode rules."
   #+sbcl
   (let ((s (make-string 1 :initial-element char)))
     (declare (dynamic-extent s))
@@ -69,6 +79,7 @@
   (char-upcase char))
 
 (define-function (char-downcase* :inline t) ((char character))
+  "Downcase a character by Unicode rules."
   #+sbcl
   (let ((s (make-string 1 :initial-element char)))
     (declare (dynamic-extent s))
@@ -79,6 +90,7 @@
 ;;; Note: This is another function which might not be correct for all
 ;;; implementations.
 (define-function (char-foldcase :inline t) ((char character))
+  "Foldcase a character by Unicode rules."
   #+sbcl
   (let ((s (make-string 1 :initial-element char)))
     (declare (dynamic-extent s))
@@ -87,12 +99,14 @@
   (char-downcase char))
 
 (define-function (string-upcase* :inline t) (string)
+  "Upcase a string by Unicode rules."
   #+sbcl
   (sb-unicode:uppercase string)
   #-sbcl
   (string-upcase string))
 
 (define-function (string-downcase* :inline t) (string)
+  "Downcase a string by Unicode rules."
   #+sbcl
   (sb-unicode:lowercase string)
   #-sbcl
@@ -100,6 +114,7 @@
 
 ;;; Note: This might not be correct for all implementations.
 (define-function (string-foldcase :inline t) (string)
+  "Foldcase a string by Unicode rules."
   #+sbcl
   (sb-unicode:casefold string)
   #-sbcl
