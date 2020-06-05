@@ -7,6 +7,14 @@ Common Lisp (CL) environment.
 Yes, [an "airship scheme" is a type of
 scheme](https://en.wikipedia.org/wiki/Imperial_Airship_Scheme)!
 
+Note
+----
+
+The primary repository is located
+[here](https://gitlab.com/mbabich/airship-scheme). Progress towards
+completion is measured under the [milestones
+here](https://gitlab.com/mbabich/airship-scheme/-/milestones).
+
 Warning
 -------
 
