@@ -62,7 +62,7 @@ in a form that CL expects.
   "Tests if a number is both not NaN and not an infinity"
   (not (and (floatp number) (or (infinitep number) (nanp number)))))
 
-(define-function eqv? (x y)
+(defun eqv? (x y)
   "
 Tests if two objects are Scheme-equivalent to each other, using the
 rules provided in the r7rs-small specification.
@@ -77,7 +77,9 @@ rules provided in the r7rs-small specification.
 ;;; TODO: Must always terminate even if the list is circular.
 ;;;
 ;;; TODO: recursively compare sequences
-;; (define-function equal? (x y))
+(defun equal? (x y)
+  ;; TODO: Stub
+  (eqv? x y))
 
 (defun coerce-subseq (sequence result-type &optional start end)
   "Coerces a subsequence into the result type"
