@@ -75,11 +75,24 @@ rules provided in the r7rs-small specification.
     (t (eq x y))))
 
 ;;; TODO: Must always terminate even if the list is circular.
-;;;
-;;; TODO: recursively compare sequences
+(defun list-equal? (x y)
+  (or (and (null x) (eql x y))
+      (and (equal? (car x) (car y))
+           (list-equal? (cdr x) (cdr y)))))
+
+(defun vector-equal? (x y)
+  (and (typep y (type-of x))
+       (= (length x) (length y))
+       (loop :for a :across x
+             :for b :across y
+             :always (equal? a b))))
+
+;;; TODO: use a sequence-generic comparison when extensible-sequences is used
 (defun equal? (x y)
-  ;; TODO: Stub
-  (eqv? x y))
+  (typecase x
+    (list (and (listp y) (list-equal? x y)))
+    (vector (and (vectorp y) (vector-equal? x y)))
+    (t (eqv? x y))))
 
 (defun coerce-subseq (sequence result-type &optional start end)
   "Coerces a subsequence into the result type"
