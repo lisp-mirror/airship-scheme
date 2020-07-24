@@ -69,8 +69,8 @@ rules provided in the r7rs-small specification.
 "
   (typecase x
     (symbol (typecase y (symbol (%symbol= x y))))
-    (inexact (typecase y (inexact (= x y))))
-    (exact (typecase y (exact (= x y))))
+    (inexact? (typecase y (inexact? (= x y))))
+    (exact? (typecase y (exact? (= x y))))
     (character (typecase y (character (char= x y))))
     (t (eq x y))))
 

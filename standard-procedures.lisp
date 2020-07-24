@@ -60,13 +60,13 @@
       (and (numberp obj) (zerop (nth-value 1 (round obj))))))
 
 (define-scheme-predicate (exact? z)
-  (exactp z))
+  (exact? z))
 
 (define-scheme-predicate (inexact? z)
-  (inexactp z))
+  (inexact? z))
 
 (define-scheme-predicate (exact-integer? z)
-  (integerp z))
+  (exact-integer? z))
 
 (define-scheme-predicate (finite? z)
   (finitep z))
@@ -276,7 +276,7 @@
   (eq obj '%scheme-boolean:f))
 
 (define-scheme-predicate (boolean? obj)
-  (scheme-boolean-p obj))
+  (boolean? obj))
 
 (define-scheme-predicate (boolean=? . booleans)
   (cond ((null booleans) t)
@@ -398,7 +398,7 @@
 ;;;; 6.5 Symbols
 
 (define-scheme-predicate (symbol? obj)
-  (scheme-symbol-p obj))
+  (symbol? obj))
 
 (define-scheme-predicate (symbol=? . symbols)
   (apply #'symbol= symbols))
@@ -480,7 +480,7 @@
 ;;;; 6.7 Strings
 
 (define-scheme-predicate (string? obj)
-  (typep obj 'scheme-string))
+  (string? obj))
 
 (define-scheme-procedure (make-string k &optional (char #.(code-char 0)))
   (make-string k :initial-element char))
@@ -561,7 +561,7 @@
 ;;;; 6.8 Vectors
 
 (define-scheme-predicate (vector? obj)
-  (typep obj 'scheme-vector))
+  (vector? obj))
 
 (define-scheme-procedure (make-vector k &optional (fill nil))
   (make-array k :initial-element fill))
@@ -570,7 +570,7 @@
   (apply #'vector obj))
 
 (define-scheme-procedure (vector-length vector)
-  (check-type vector scheme-vector)
+  (check-type vector vector?)
   (length vector))
 
 (define-scheme-procedure (vector-ref vector k)
@@ -580,39 +580,39 @@
   (setf (svref vector k) obj))
 
 (define-scheme-procedure (vector->list vector &optional start end)
-  (check-type vector scheme-vector)
+  (check-type vector vector?)
   (coerce-subseq vector 'list start end))
 
 (define-scheme-procedure (list->vector list)
-  (coerce list 'scheme-vector))
+  (coerce list 'vector?))
 
 (define-scheme-procedure (vector->string vector &optional start end)
-  (check-type vector scheme-vector)
+  (check-type vector vector?)
   (coerce-subseq vector 'string start end))
 
 (define-scheme-procedure (string->vector string &optional start end)
   (coerce-subseq string 'scheme-vector start end))
 
 (define-scheme-procedure (vector-copy vector &optional start end)
-  (check-type vector scheme-vector)
+  (check-type vector vector?)
   (copy-seq-or-subseq vector start end))
 
 (define-scheme-procedure (vector-copy! to at from &optional (start 0) end)
-  (check-type to scheme-vector)
-  (check-type from scheme-vector)
+  (check-type to vector?)
+  (check-type from vector?)
   (replace to from :start1 at :start2 start :end2 end))
 
 (define-scheme-procedure (vector-append . vector)
   (apply #'concatenate 'simple-vector vector))
 
 (define-scheme-procedure (vector-fill! vector fill &optional (start 0) end)
-  (check-type vector scheme-vector)
+  (check-type vector vector?)
   (fill vector fill :start start :end end))
 
 ;;;; 6.9 Bytevectors
 
 (define-scheme-predicate (bytevector? obj)
-  (typep obj 'bytevector))
+  (bytevector? obj))
 
 (define-scheme-procedure (make-bytevector k &optional (byte 0))
   (make-array k :element-type 'octet :initial-element byte))
@@ -621,31 +621,31 @@
   (make-array (length byte) :element-type 'octet :initial-contents byte))
 
 (define-scheme-procedure (bytevector-length bytevector)
-  (check-type bytevector bytevector)
+  (check-type bytevector bytevector?)
   (length bytevector))
 
 (define-scheme-procedure (bytevector-u8-ref bytevector k)
-  (check-type bytevector bytevector)
+  (check-type bytevector bytevector?)
   (aref bytevector k))
 
 (define-scheme-procedure (bytevector-u8-set! bytevector k byte)
-  (check-type bytevector bytevector)
+  (check-type bytevector bytevector?)
   (setf (aref bytevector k) byte))
 
 (define-scheme-procedure (bytevector-copy bytevector &optional start end)
-  (check-type bytevector bytevector)
+  (check-type bytevector bytevector?)
   (copy-seq-or-subseq bytevector start end))
 
 (define-scheme-procedure (bytevector-copy! to at from &optional start end)
-  (check-type to bytevector)
-  (check-type from bytevector)
+  (check-type to bytevector?)
+  (check-type from bytevector?)
   (replace to from :start1 at :start2 start :end2 end))
 
 (define-scheme-procedure (bytevector-append . bytevector)
   (apply #'concatenate 'bytevector bytevector))
 
 (define-scheme-procedure (utf8->string bytevector &optional (start 0) end)
-  (check-type bytevector bytevector)
+  (check-type bytevector bytevector?)
   (utf8-to-string bytevector :start start :end end))
 
 (define-scheme-procedure (string->utf8 string &optional (start 0) end)

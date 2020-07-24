@@ -2,70 +2,68 @@
 
 (in-package #:airship-scheme)
 
-;;;; Type Definitions
+;;;; Define type definitions
 
-(deftype exact ()
+;;; TODO: The define-scheme-predicate could go here, too
+(defmacro define-scheme-type ((name &rest lambda-list) &body body)
+  (let ((docstring (if (and (stringp (car body)) (cdr body))
+                       (list (car body))
+                       nil)))
+    `(progn
+       (deftype ,name ,lambda-list
+         ,@body)
+       (define-function (,name :inline t) (object)
+         ,@docstring
+         (and (typep object ',name) t)))))
+
+;;;; Type definitions
+
+(define-scheme-type (exact?)
   "An exact number might be real or complex, but is not a float."
   `(or rational (complex rational)))
 
-(deftype exact-integer ()
-  "An exact-integer in Scheme is just a CL integer."
+(define-scheme-type (exact-integer?)
+  "An exact integer in Scheme is just a CL integer."
   `integer)
 
-(deftype inexact ()
+(define-scheme-type (inexact?)
   "An inexact number is just a float, real or complex."
   `(or float (complex float)))
 
-(deftype flonum ()
+(define-scheme-type (flonum?)
   "A Scheme flonum is just a double-float."
   'double-float)
 
-(deftype scheme-boolean ()
+(define-scheme-type (boolean?)
   "
 The two symbols that represent a Scheme Boolean, which externally are
 known as #t or #f
 "
   `(or (eql t) (eql %scheme-boolean:f)))
 
-(deftype scheme-vector ()
+(define-scheme-type (vector?)
   "A Scheme vector is just a T vector"
   `simple-vector)
 
-(deftype scheme-string ()
+(define-scheme-type (string?)
   "A Scheme string is just a simple string."
   'simple-string)
 
-(deftype bytevector ()
+(define-scheme-type (bytevector?)
   "A Scheme bytevector is just an octet vector"
   `(simple-array octet (*)))
 
-;;;; Type Predicates
-
-(define-function (exactp :inline t) (number)
-  "Tests if a number is exact"
-  (and (typep number 'exact) t))
-
-(define-function (inexactp :inline t) (number)
-  "Tests if a number is inexact"
-  (and (typep number 'inexact) t))
-
-(define-function (scheme-boolean-p :inline t) (object)
-  "Tests if an object is either a Scheme #t or a Scheme #f"
-  (and (typep object 'scheme-boolean) t))
-
-(define-function (scheme-symbol-p :inline t) (object)
+(define-scheme-type (symbol?)
   "Tests if an object is a Scheme symbol"
-  (and object
-       (symbolp object)
-       (not (scheme-boolean-p object))))
+  `(and symbol (not null) (not boolean?)))
 
 ;;;; Type Conversion
 
 (define-function (inexact :inline t) ((z number))
   "Converts a number to a Scheme inexact."
   (etypecase z
-    ((and complex exact) (coerce z '(complex double-float)))
-    (exact (coerce z 'double-float))
+    ((and complex exact?) (coerce z '(complex double-float)))
+    (exact? (coerce z 'double-float))
     (number z)))
 
 ;;; Note: This uses rationalize. cl:rationalize is not the same thing
@@ -75,7 +73,7 @@ known as #t or #f
 (define-function (exact :inline t) ((z number))
   "Converts a number to a Scheme exact."
   (etypecase z
-    ((and complex inexact) (complex (rationalize (realpart z))
+    ((and complex inexact?) (complex (rationalize (realpart z))
                                     (rationalize (imagpart z))))
-    (inexact (rationalize z))
+    (inexact? (rationalize z))
     (number z)))
