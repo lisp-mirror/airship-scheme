@@ -1,6 +1,9 @@
 ;;;; -*- mode: common-lisp; -*-
 
 ;;;; Non-string equality testing
+;;;;
+;;;; The core three equivalents predicates are described in r7rs.pdf
+;;;; section 6.1.
 
 (in-package #:airship-scheme)
 

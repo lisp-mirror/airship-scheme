@@ -24,11 +24,6 @@
 ;;;; todo: add errors when errors are required
 
 ;;;; 6.1 - Equivalence predicates
-;;;;
-;;;; Note: These have to be implemented last to make sure that they
-;;;; follow Scheme equivalence rules... except for eq? which is
-;;;; sufficiently under-specified that being synonymous with EQ is not
-;;;; an issue.
 
 (define-scheme-predicate (eqv? obj1 obj2)
   (eqv? obj1 obj2))
@@ -291,7 +286,7 @@
 ;;; Basic cons pair procedures
 
 (define-scheme-predicate (pair? obj)
-  (consp obj))
+  (pair? obj))
 
 (define-scheme-procedure (cons obj1 obj2)
   (cons obj1 obj2))
@@ -341,10 +336,10 @@
 ;;; List procedures
 
 (define-scheme-predicate (null? obj)
-  (null obj))
+  (null? obj))
 
 (define-scheme-predicate (list? obj)
-  (a:proper-list-p obj))
+  (list? obj))
 
 (define-scheme-procedure (make-list k &optional (fill nil))
   (make-list k :initial-element fill))
@@ -412,7 +407,7 @@
 ;;;; 6.6 Characters
 
 (define-scheme-predicate (char? obj)
-  (typep obj 'character))
+  (char? obj))
 
 (define-scheme-predicate (char=? char . more-chars)
   (apply #'char= char more-chars))

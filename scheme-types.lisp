@@ -4,8 +4,8 @@
 
 ;;;; Define type definitions
 
-;;; TODO: The define-scheme-predicate could go here, too
-(defmacro define-scheme-type ((name &rest lambda-list) &body body)
+;;;; TODO: The define-scheme-predicate could go here, too
+(defmacro %define-scheme-type ((name &rest lambda-list) predicate &body body)
   (let ((docstring (if (and (stringp (car body)) (cdr body))
                        (list (car body))
                        nil)))
@@ -14,7 +14,17 @@
          ,@body)
        (define-function (,name :inline t) (object)
          ,@docstring
-         (and (typep object ',name) t)))))
+         (and ,predicate t)))))
+
+;;; For types with no built-in predicate
+(defmacro define-scheme-type ((name &rest lambda-list) &body body)
+  `(%define-scheme-type (,name ,@lambda-list) (typep object ',name)
+     ,@body))
+
+;;; For CL types that use a predicate instead of typep
+(defmacro define-scheme-type* ((name &rest lambda-list) predicate &body body)
+  `(%define-scheme-type (,name ,@lambda-list) (,predicate object)
+     ,@body))
 
 ;;;; Type definitions
 
@@ -49,6 +59,10 @@ known as #t or #f
   "A Scheme string is just a simple string."
   'simple-string)
 
+(define-scheme-type (char?)
+  "A Scheme char is just a character."
+  'character)
+
 (define-scheme-type (bytevector?)
   "A Scheme bytevector is just an octet vector"
   `(simple-array octet (*)))
@@ -56,6 +70,25 @@ known as #t or #f
 (define-scheme-type (symbol?)
   "Tests if an object is a Scheme symbol"
   `(and symbol (not null) (not boolean?)))
+
+(define-scheme-type* (list?) a:proper-list-p
+  "Scheme's list? tests for a proper list"
+  `a:proper-list)
+
+(define-scheme-type* (%list?) listp
+  "
+A lower-level, faster list test that permits improper lists, which
+don't end in NIL.
+"
+  `list)
+
+(define-scheme-type* (pair?) consp
+  "A pair? in Scheme is a cons cell."
+  `cons)
+
+(define-scheme-type* (null?) null
+  "A null? in Scheme is nil."
+  `null)
 
 ;;;; Type Conversion
 
