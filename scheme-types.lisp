@@ -28,21 +28,36 @@
 
 ;;;; Type definitions
 
+(define-scheme-type* (number?) numberp
+  'number)
+
+(define-scheme-type* (complex?) numberp
+  'number)
+
+(define-scheme-type* (real?) realp
+  'real)
+
+(define-scheme-type (rational?)
+  '(or rational float))
+
+;;; TODO: integer?
+
 (define-scheme-type (exact?)
   "An exact number might be real or complex, but is not a float."
   `(or rational (complex rational)))
-
-(define-scheme-type (exact-integer?)
-  "An exact integer in Scheme is just a CL integer."
-  `integer)
 
 (define-scheme-type (inexact?)
   "An inexact number is just a float, real or complex."
   `(or float (complex float)))
 
 (define-scheme-type (flonum?)
-  "A Scheme flonum is just a double-float."
   'double-float)
+
+(define-scheme-type (exact-integer?)
+  `integer)
+
+(define-scheme-type* (zero?) zerop
+  '(or (real 0 0) (complex (real 0 0))))
 
 (define-scheme-type (boolean?)
   "

@@ -39,16 +39,16 @@
 ;;; Numerical predicates
 
 (define-scheme-predicate (number? obj)
-  (numberp obj))
+  (number? obj))
 
 (define-scheme-predicate (complex? obj)
-  (numberp obj))
+  (complex? obj))
 
 (define-scheme-predicate (real? obj)
-  (realp obj))
+  (real? obj))
 
 (define-scheme-predicate (rational? obj)
-  (or (rationalp obj) (floatp obj)))
+  (rational? obj))
 
 (define-scheme-predicate (integer? obj)
   (or (integerp obj)
@@ -90,7 +90,7 @@
   (apply #'>= x more-numbers))
 
 (define-scheme-predicate (zero? z)
-  (zerop z))
+  (zero? z))
 
 (define-scheme-predicate (positive? x)
   (plusp x))
