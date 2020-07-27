@@ -51,8 +51,7 @@
   (rational? obj))
 
 (define-scheme-predicate (integer? obj)
-  (or (integerp obj)
-      (and (numberp obj) (zerop (nth-value 1 (round obj))))))
+  (integer? obj))
 
 (define-scheme-predicate (exact? z)
   (exact? z))
@@ -64,13 +63,13 @@
   (exact-integer? z))
 
 (define-scheme-predicate (finite? z)
-  (finitep z))
+  (finite? z))
 
 (define-scheme-predicate (infinite? z)
-  (infinitep z))
+  (infinite? z))
 
 (define-scheme-predicate (nan? z)
-  (nanp z))
+  (nan? z))
 
 ;;; Basic numerical procedures
 

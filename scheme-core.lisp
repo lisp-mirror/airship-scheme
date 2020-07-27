@@ -43,18 +43,6 @@ in a form that CL expects.
   "Interns a Scheme symbol using one package, with its case inverted."
   (intern (invert-case string) '#:r7rs))
 
-(define-function (nanp :inline t) ((number number))
-  "Tests if a number is NaN"
-  (and (floatp number) (f:float-nan-p number)))
-
-(define-function (infinitep :inline t) ((number number))
-  "Tests if a number is an infinity"
-  (and (floatp number) (f:float-infinity-p number)))
-
-(define-function (finitep :inline t) ((number number))
-  "Tests if a number is both not NaN and not an infinity"
-  (not (and (floatp number) (or (infinitep number) (nanp number)))))
-
 (defun coerce-subseq (sequence result-type &optional start end)
   "Coerces a subsequence into the result type"
   (let ((subseq (if start

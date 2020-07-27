@@ -2,7 +2,24 @@
 
 (in-package #:airship-scheme)
 
-;;;; Define type definitions
+;;;; Helper functions useful for SATISFIES types or standalone tests
+
+(define-function (mathematical-integer-p :inline t) ((number number))
+  (zerop (nth-value 1 (round number))))
+
+(define-function (nanp :inline t) ((number number))
+  "Tests if a number is NaN"
+  (and (floatp number) (f:float-nan-p number)))
+
+(define-function (infinitep :inline t) ((number number))
+  "Tests if a number is an infinity"
+  (and (floatp number) (f:float-infinity-p number)))
+
+(define-function (finitep :inline t) ((number number))
+  "Tests if a number is both not NaN and not an infinity"
+  (not (and (floatp number) (or (infinitep number) (nanp number)))))
+
+;;;; Type definitions
 
 ;;;; TODO: The define-scheme-predicate could go here, too
 (defmacro %define-scheme-type ((name &rest lambda-list) predicate &body body)
@@ -40,7 +57,15 @@
 (define-scheme-type (rational?)
   '(or rational float))
 
-;;; TODO: integer?
+(define-scheme-type (integer?)
+  "
+A Scheme integer? is a mathematical integer, which means that it is
+either a CL integer or it is a number (probably a float) that
+satisfies the mathematical definition of an integer. Since this is a
+SATISFIES type, it should be used sparingly.
+"
+  `(or integer
+       (and number (satisfies mathematical-integer-p))))
 
 (define-scheme-type (exact?)
   "An exact number might be real or complex, but is not a float."
@@ -56,8 +81,18 @@
 (define-scheme-type (exact-integer?)
   `integer)
 
+(define-scheme-type* (finite?) finitep
+  `(satisfies finitep))
+
+(define-scheme-type* (infinite?) infinitep
+  `(satisfies infinitep))
+
+(define-scheme-type* (nan?) nanp
+  `(satisfies nanp))
+
 (define-scheme-type* (zero?) zerop
-  '(or (real 0 0) (complex (real 0 0))))
+  `(or (real 0 0)
+       (complex (real 0 0))))
 
 (define-scheme-type (boolean?)
   "
