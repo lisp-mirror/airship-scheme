@@ -16,6 +16,7 @@
                #-sbcl
                :babel
                :float-features
+               :trivial-features
                :zr-utils)
   :components ((:file "package")
                (:file "scheme-boolean")

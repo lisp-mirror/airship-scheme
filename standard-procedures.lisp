@@ -788,4 +788,36 @@
 (define-scheme-procedure (jiffies-per-second)
   internal-time-units-per-second)
 
-;;; (features)
+(define-scheme-procedure (features)
+  '(r7rs
+    exact-closed
+    exact-complex
+    ;; CCL doesn't have this in *features*, but SBCL and ECL do.
+    #+(or ccl ieee-floating-point) ieee-float
+    ;; TODO: other implementations might also have full Unicode
+    #+(and sbcl sb-unicode) full-unicode
+    ratios
+    #+unix posix
+    ;; Features guaranteed by trivial-features
+    #+unix unix
+    #+windows windows
+    #+linux linux
+    #+bsd bsd
+    #+darwin darwin
+    #+x86 x86
+    #+x86-64 x86-64
+    #+ppc ppc
+    #+32-bit 32-bit
+    #+64-bit 64-bit
+    #+big-endian big-endian
+    #+little-endian little-endian
+    ;; Supported CL implementations for now
+    #+sbcl sbcl
+    #+ccl ccl
+    #+ecl ecl
+    ;; Threads, if bordeaux-threads is loaded
+    #+thread-support thread-support
+    ;; Features describing this Scheme
+    airship
+    airship-scheme
+    airship-scheme-0))
