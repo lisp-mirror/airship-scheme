@@ -55,7 +55,7 @@
   'real)
 
 (define-scheme-type (rational?)
-  '(or rational float))
+  `(or rational float))
 
 (define-scheme-type (integer?)
   "
@@ -79,7 +79,7 @@ SATISFIES type, it should be used sparingly.
   'double-float)
 
 (define-scheme-type (exact-integer?)
-  `integer)
+  'integer)
 
 (define-scheme-type* (finite?) finitep
   `(satisfies finitep))
@@ -103,7 +103,7 @@ known as #t or #f
 
 (define-scheme-type (vector?)
   "A Scheme vector is just a T vector"
-  `simple-vector)
+  'simple-vector)
 
 (define-scheme-type (string?)
   "A Scheme string is just a simple string."
@@ -123,22 +123,22 @@ known as #t or #f
 
 (define-scheme-type* (list?) a:proper-list-p
   "Scheme's list? tests for a proper list"
-  `a:proper-list)
+  'a:proper-list)
 
 (define-scheme-type* (%list?) listp
   "
 A lower-level, faster list test that permits improper lists, which
 don't end in NIL.
 "
-  `list)
+  'list)
 
 (define-scheme-type* (pair?) consp
   "A pair? in Scheme is a cons cell."
-  `cons)
+  'cons)
 
 (define-scheme-type* (null?) null
   "A null? in Scheme is nil."
-  `null)
+  'null)
 
 ;;;; Type Conversion
 
