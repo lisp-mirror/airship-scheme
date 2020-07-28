@@ -183,8 +183,8 @@
 | [SRFI 176]     |                          |                                             |
 | [SRFI 177]     | Draft                    |                                             |
 | [SRFI 178]     | Draft                    |                                             |
-| [SRFI 179]     | Draft                    |                                             |
-| [SRFI 180]     | Draft                    |                                             |
+| [SRFI 179]     |                          |                                             |
+| [SRFI 180]     |                          |                                             |
 | [SRFI 181]     | Draft                    |                                             |
 | ~~[SRFI 182]~~ | *Withdrawn*              |                                             |
 | ~~[SRFI 183]~~ | *Withdrawn*              |                                             |
@@ -192,15 +192,24 @@
 | [SRFI 185]     |                          |                                             |
 | [SRFI 186]     |                          |                                             |
 | ~~[SRFI 187]~~ | *Withdrawn*              |                                             |
-| [SRFI 188]     | Draft                    |                                             |
-| [SRFI 189]     | Draft                    |                                             |
-| [SRFI 190]     | Draft                    |                                             |
-| [SRFI 191]     | Draft                    |                                             |
+| [SRFI 188]     |                          |                                             |
+| [SRFI 189]     |                          |                                             |
+| [SRFI 190]     |                          |                                             |
+| ~~[SRFI 191]~~ | *Withdrawn*              |                                             |
 | [SRFI 192]     | Draft                    |                                             |
 | [SRFI 193]     | Draft                    |                                             |
 | [SRFI 194]     | Draft                    |                                             |
 | [SRFI 195]     | Draft                    |                                             |
 | [SRFI 196]     | Draft                    |                                             |
+| [SRFI 197]     | Draft                    |                                             |
+| [SRFI 198]     | Draft                    |                                             |
+| ~~[SRFI 199]~~ | *Withdrawn*              |                                             |
+| [SRFI 200]     | Draft                    |                                             |
+| [SRFI 201]     | Draft                    |                                             |
+| [SRFI 202]     | Draft                    |                                             |
+| [SRFI 203]     | Draft                    |                                             |
+| [SRFI 204]     | Draft                    |                                             |
+| [SRFI 205]     | Draft                    |                                             |
 
 ## Non-SRFIs in [R7RS-large]
 
@@ -446,4 +455,13 @@
 [SRFI 194]: https://srfi.schemers.org/srfi-194/srfi-194.html
 [SRFI 195]: https://srfi.schemers.org/srfi-195/srfi-195.html
 [SRFI 196]: https://srfi.schemers.org/srfi-196/srfi-196.html
+[SRFI 197]: https://srfi.schemers.org/srfi-197/srfi-197.html
+[SRFI 198]: https://srfi.schemers.org/srfi-198/srfi-198.html
+[SRFI 199]: https://srfi.schemers.org/srfi-199/srfi-199.html
+[SRFI 200]: https://srfi.schemers.org/srfi-200/srfi-200.html
+[SRFI 201]: https://srfi.schemers.org/srfi-201/srfi-201.html
+[SRFI 202]: https://srfi.schemers.org/srfi-202/srfi-202.html
+[SRFI 203]: https://srfi.schemers.org/srfi-203/srfi-203.html
+[SRFI 204]: https://srfi.schemers.org/srfi-204/srfi-204.html
+[SRFI 205]: https://srfi.schemers.org/srfi-205/srfi-205.html
 [R6RS bytevectors]: http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-3.html#node_chap_2
