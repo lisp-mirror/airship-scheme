@@ -1,8 +1,7 @@
 ;;;; -*- mode: scheme; -*-
 
-;;;; R7RS Standard Libraries
-
 (define-library (scheme base)
+  (import (airship r7rs))
   (export * + - ... / < <= = => > >= _ abs and append apply assoc assq assv
           begin binary-port? boolean=? boolean? bytevector bytevector-append
           bytevector-copy bytevector-copy! bytevector-length bytevector-u8-ref
@@ -40,75 +39,75 @@
           vector->list vector->string vector-append vector-copy vector-copy!
           vector-fill! vector-for-each vector-length vector-map vector-ref
           vector-set! vector? when with-exception-handler write-bytevector
-          write-char write-string write-u8 zero?)
-  (include-lisp "standard-procedures.lisp"))
+          write-char write-string write-u8 zero?))
 
 (define-library (scheme case-lambda)
-  (export case-lambda)
-  (include-lisp "standard-procedures.lisp"))
+  (import (airship r7rs))
+  (export case-lambda))
 
 (define-library (scheme char)
+  (import (airship r7rs))
   (export char-alphabetic? char-ci<=? char-ci<? char-ci=? char-ci>=? char-ci>?
           char-downcase char-foldcase char-lower-case? char-numeric? char-upcase
           char-upper-case? char-whitespace? digit-value string-ci<=? string-ci<?
           string-ci=? string-ci>=? string-ci>? string-downcase string-foldcase
-          string-upcase)
-  (include-lisp "standard-procedures.lisp"))
+          string-upcase))
 
 (define-library (scheme complex)
-  (export angle imag-part magnitude make-polar make-rectangular real-part)
-  (include-lisp "standard-procedures.lisp"))
+  (import (airship r7rs))
+  (export angle imag-part magnitude make-polar make-rectangular real-part))
 
 (define-library (scheme cxr)
+  (import (airship r7rs))
   (export caaaar caaadr caaar caadar caaddr caadr cadaar cadadr cadar caddar
           cadddr caddr cdaaar cdaadr cdaar cdadar cdaddr cdadr cddaar cddadr
-          cddar cdddar cddddr cdddr)
-  (include-lisp "standard-procedures.lisp"))
+          cddar cdddar cddddr cdddr))
 
 (define-library (scheme eval)
-  (export environment eval)
-  (include-lisp "standard-procedures.lisp"))
+  (import (airship r7rs))
+  (export environment eval))
 
 (define-library (scheme file)
+  (import (airship r7rs))
   (export call-with-input-file call-with-output-file delete-file file-exists?
           open-binary-input-file open-binary-output-file open-input-file
-          open-output-file with-input-from-file with-output-to-file)
-  (include-lisp "standard-procedures.lisp"))
+          open-output-file with-input-from-file with-output-to-file))
 
 (define-library (scheme inexact)
-  (export (acos asin atan cos exp finite? infinite? log nan? sin sqrt tan))
-  (include-lisp "standard-procedures.lisp"))
+  (import (airship r7rs))
+  (export (acos asin atan cos exp finite? infinite? log nan? sin sqrt tan)))
 
 (define-library (scheme lazy)
-  (export delay delay-force force make-promise promise?)
-  (include-lisp "standard-procedures.lisp"))
+  (import (airship r7rs))
+  (export delay delay-force force make-promise promise?))
 
 (define-library (scheme load)
-  (export load)
-  (include-lisp "standard-procedures.lisp"))
+  (import (airship r7rs))
+  (export load))
 
 (define-library (scheme process-context)
+  (import (airship r7rs))
   (export command-line emergency-exit exit get-environment-variable
-          get-environment-variables)
-  (include-lisp "standard-procedures.lisp"))
+          get-environment-variables))
 
 (define-library (scheme read)
-  (export read)
-  (include-lisp "standard-procedures.lisp"))
+  (import (airship r7rs))
+  (export read))
 
 (define-library (scheme repl)
-  (export interaction-environment)
-  (include-lisp "standard-procedures.lisp"))
+  (import (airship r7rs))
+  (export interaction-environment))
 
 (define-library (scheme time)
-  (export current-jiffy current-second jiffies-per-second)
-  (include-lisp "standard-procedures.lisp"))
+  (import (airship r7rs))
+  (export current-jiffy current-second jiffies-per-second))
 
 (define-library (scheme write)
-  (export display write write-shared write-simple)
-  (include-lisp "standard-procedures.lisp"))
+  (import (airship r7rs))
+  (export display write write-shared write-simple))
 
 (define-library (scheme r5rs)
+  (import (airship r7rs))
   (export * + - / < <= = > >= abs acos and angle append apply asin assoc assq
           assv atan begin boolean? caaaar caaadr caaar caadar caaddr caadr caar
           cadaar cadadr cadar caddar cadddr caddr cadr
@@ -139,5 +138,4 @@
           string=? string>=? string>? string? substring symbol->string symbol?
           tan truncate values vector vector->list vector-fill! vector-length
           vector-ref vector-set! vector? with-input-from-file
-          with-output-to-file write write-char zero?)
-  (include-lisp "standard-procedures.lisp"))
+          with-output-to-file write write-char zero?))
