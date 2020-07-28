@@ -9,13 +9,7 @@
 ;;; error to use.
 (define-library (srfi 172 functional)
   (functional)
-  (import (scheme base))
-  (import (scheme case-lambda))
-  (import (scheme char))
-  (import (scheme complex))
-  (import (scheme cxr))
-  (import (scheme inexact))
-  (import (scheme lazy))
+  (import (airship functional))
   (export - * / + < <= = => > >= abs acos and angle append apply asin assoc assq
           assv atan begin boolean? boolean=? bytevector bytevector?
           bytevector-append bytevector-copy bytevector-length bytevector-u8-ref
