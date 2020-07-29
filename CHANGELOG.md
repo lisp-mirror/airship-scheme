@@ -10,7 +10,7 @@ Changelog](https://keepachangelog.com/en/1.0.0/).
    functionality, including a wrapper over `sb-unicode`, the Unicode
    functionality of SBCL, when present.
  - Common Lisp implementations of the main Scheme equality predicates.
- - A separate false value from nil, which is not false in Scheme.
+ - A separate false value from `nil`, which is not false in Scheme.
  - A `define-scheme-type` macro family, which partially `Lisp-1`ifies
    the separate type namespace by creating a predicate for each type
    that is defined, using the predicate's name as the type name, e.g.
@@ -34,8 +34,7 @@ Changelog](https://keepachangelog.com/en/1.0.0/).
    - Library definitions for the `(scheme)` libraries described in
      [R7RS-small] Appendix A.
    - Some SRFIs entirely contained within R7RS-small: 6, 9, 87, and 98.
-   - [SRFI 112], except for the library definition itself.
-   - Subsets of the [R7RS-small] libraries, specified as [SRFI 172].
+   - [SRFI 112] and [SRFI 172].
 
 [R7RS-small]: https://small.r7rs.org/attachment/r7rs.pdf
 [SRFI 112]: https://srfi.schemers.org/srfi-112/srfi-112.html
