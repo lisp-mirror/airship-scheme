@@ -26,4 +26,5 @@
                (:file "equality")
                (:file "scheme-write")
                (:file "scheme-read")
-               (:file "standard-procedures")))
+               (:file "standard-procedures")
+               (:file "extra-procedures")))
