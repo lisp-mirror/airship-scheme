@@ -697,10 +697,10 @@
 ;;; (call-with-output-file string proc)
 
 (define-scheme-procedure (input-port? obj)
-  (input-stream-p obj))
+  (input-port? obj))
 
 (define-scheme-procedure (output-port? obj)
-  (output-stream-p obj))
+  (output-port? obj))
 
 (define-scheme-procedure (textual-port? obj)
   (and (streamp obj)
@@ -713,7 +713,7 @@
                          'integer))))
 
 (define-scheme-procedure (port? obj)
-  (streamp obj))
+  (port? obj))
 
 (define-scheme-procedure (input-port-open? port)
   (and (input-stream-p port)

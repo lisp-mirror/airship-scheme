@@ -19,7 +19,7 @@
   "Tests if a number is both not NaN and not an infinity"
   (not (and (floatp number) (or (infinitep number) (nanp number)))))
 
-;;;; Type definitions
+;;;; Type definition macros
 
 ;;;; TODO: The define-scheme-predicate could go here, too
 (defmacro %define-scheme-type ((name &rest lambda-list) predicate &body body)
@@ -43,7 +43,7 @@
   `(%define-scheme-type (,name ,@lambda-list) (,predicate object)
      ,@body))
 
-;;;; Type definitions
+;;;; Numeric types
 
 (define-scheme-type* (number?) numberp
   'number)
@@ -94,6 +94,8 @@ SATISFIES type, it should be used sparingly.
   `(or (real 0 0)
        (complex (real 0 0))))
 
+;;;; Other types
+
 (define-scheme-type (boolean?)
   "
 The two symbols that represent a Scheme Boolean, which externally are
@@ -139,6 +141,15 @@ don't end in NIL.
 (define-scheme-type* (null?) null
   "A null? in Scheme is nil."
   'null)
+
+(define-scheme-type* (port?) streamp
+  'stream)
+
+(define-scheme-type* (input-port?) input-stream-p
+  `(satisfies input-stream-p))
+
+(define-scheme-type* (output-port?) output-stream-p
+  `(satisfies output-stream-p))
 
 ;;;; Type Conversion
 
