@@ -68,29 +68,39 @@ SATISFIES type, it should be used sparingly.
        (and number (satisfies mathematical-integer-p))))
 
 (define-scheme-type (exact?)
-  "An exact number might be real or complex, but is not a float."
+  "An exact number might be real or complex, but is not a float"
   `(or rational (complex rational)))
 
 (define-scheme-type (inexact?)
-  "An inexact number is just a float, real or complex."
+  "An inexact number is just a float, real or complex"
   `(or float (complex float)))
 
 (define-scheme-type (flonum?)
   'double-float)
 
 (define-scheme-type (exact-integer?)
+  "An exact integer is anything of the low-level CL integer type"
   'integer)
 
 (define-scheme-type* (finite?) finitep
+  "Any number that is neither an infinity nor a NaN"
   `(satisfies finitep))
 
 (define-scheme-type* (infinite?) infinitep
+  "Any floating point infinity"
   `(satisfies infinitep))
 
 (define-scheme-type* (nan?) nanp
+  "Any float that's a NaN"
   `(satisfies nanp))
 
 (define-scheme-type* (zero?) zerop
+  "
+A zero? is any way to represent zero, real or complex. A complex zero
+can exist if floating point.
+"
+  ;; Note: (complex (float 0 0)) might also work instead of (complex
+  ;; (real 0 0))
   `(or (real 0 0)
        (complex (real 0 0))))
 
