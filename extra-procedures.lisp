@@ -7,11 +7,27 @@
 ;;;; Procedures used by various SRFIs or core libraries, but not in
 ;;;; R7RS-small.
 
-;;;; SRFI 112
+;;;; cl-environment
 
-;;;; Note: It might also be useful to expose
-;;;; (lisp-implementation-type) and (lisp-implementation-version) so
-;;;; that the user knows what the host Common Lisp is.
+(define-scheme-procedure (internal-time-units-per-second)
+  internal-time-units-per-second)
+
+(define-scheme-procedure (internal-real-time)
+  (get-internal-real-time))
+
+(define-scheme-procedure (internal-run-time)
+  (get-internal-run-time))
+
+(define-scheme-procedure (lisp-implementation-type)
+  (lisp-implementation-type))
+
+(define-scheme-procedure (lisp-implementation-version)
+  (lisp-implementation-version))
+
+(define-scheme-procedure (user-homedir-pathname)
+  (user-homedir-pathname))
+
+;;; SRFI 112
 
 (define-scheme-procedure (implementation-name)
   "Airship Scheme")
