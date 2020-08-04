@@ -22,32 +22,44 @@ Airship Scheme style guide will have to be written in the future.
 Complications and design solutions
 ----------------------------------
 
-Common Lisp is, in its default behavior, effectively case-insensitive.
-It does this by upcasing any lower case input. For example, `car`
-becomes `CAR`. This was done for maximal backwards compatibility.
-These days, Common Lisp is mostly written in lower case and relies on
-this automatic conversion to upper case. Scheme, on the other hand, is
-a case-sensitive programming language. Thus, `car` in Scheme remains
-`car` and a Scheme program could define a separate `Car` or `CAR` that
-needs to be treated separately. The easiest solution to this problem
-is to *invert* the case of the Scheme implementation. In other words,
-`car` becomes `CAR` internally and `Car` would become `cAR`
-internally.
+### Symbol case
+
+Common Lisp is, in its default behavior, effectively case-insensitive
+for its symbols. It does this by upcasing any lower case input. For
+example, `car` becomes `CAR`. This was done for maximal backwards
+compatibility. These days, Common Lisp is mostly written in lower case
+and relies on this automatic conversion to upper case. Scheme, on the
+other hand, is a case-sensitive programming language. Thus, `car` in
+Scheme remains `car` and a Scheme program could define a separate
+`Car` or `CAR` that needs to be treated separately. The easiest
+solution to this problem is to *invert* the case of the Scheme
+implementation. In other words, `car` becomes `CAR` internally and
+`Car` would become `cAR` internally.
+
+### `NIL` vs. `#f`
 
 Common Lisp does not distinguish between false and the empty list,
 treating both as `NIL`. Scheme, on the other hand, distinguishes
 between the false value `#f` and the empty list `'()`. In order to
 preserve the native cons cell data structure, Airship Scheme chooses
-to have a separate false value for Scheme. This means that any wrapped
-Common Lisp function must have its semantics distinguished as either a
-regular procedure or a predicate. This is done by providing both the
-`define-scheme-procedure` and `define-scheme-predicate` macros. In a
-Scheme procedure, CL's `NIL` is treated as the empty list and not
-converted. In a Scheme predicate, the CL call is wrapped by a simple
-function that converts `NIL` to Scheme's `#f`. The other direction is
-easier. Calling Scheme from CL will always turn `#f` into `NIL`,
-although that presents the downside of some information potentially
-being lost.
+to have a separate false value for Scheme.
+
+This means that any wrapped Common Lisp function must have its
+semantics distinguished as either a regular procedure or a predicate.
+This is done by providing both the `define-scheme-procedure` and
+`define-scheme-predicate` macros. In a Scheme procedure, CL's `NIL` is
+treated as the empty list and not converted. In a Scheme predicate,
+the CL call is wrapped by a simple function that converts `NIL` to
+Scheme's `#f`. The other direction is easier. Calling Scheme from CL
+will always turn `#f` into `NIL`, although that means that some
+information may be lost.
+
+Internally, Scheme's `#f` is just `'%scheme-boolean:f`. There should
+be no performance penalty because most Common Lisp implementations are
+already comparing to `NIL` to find false. All that changes is the
+exact symbol that's being used.
+
+### Tail recursion
 
 Common Lisp does not guarantee optimized tail recursion, even though
 some implementations do offer it. Even when that is the case, tail
@@ -56,13 +68,16 @@ Scheme's. Additionally, differing optimization levels can take code
 that would normally have tail recursion and remove the tail recursion.
 This is unacceptable from the perspective of a guest Scheme in the CL
 environment because tail recursion is the idiomatic iteration in
-Scheme and unexpected recursion limits would be bad. For this reason,
-there needs to be a minimal runtime environment, where the guest
-Scheme code does recursion through a
+Scheme and unexpected recursion limits would be bad.
+
+For this reason, there needs to be a minimal runtime environment,
+where the guest Scheme code does recursion through a
 [trampoline](https://en.wikipedia.org/wiki/Trampoline_(computing)).
 This guarantees tail recursion and in testing has shown to have no
 noticeable performance loss over a CL implementation's native tail
 recursion.
+
+### Environments
 
 Although Common Lisp has lexical scope in addition to dynamic scope,
 the standard Common Lisp global variable environment, via `defvar` or
@@ -70,14 +85,36 @@ the standard Common Lisp global variable environment, via `defvar` or
 Common Lisp environments can normally be used, they cannot be used for
 a mutable global Scheme environment for things like the REPL and CL's
 interactive, SLIME-style development. This has not yet been completely
-addressed. Additionally, CL is a Lisp-2 (having separate variable and
-function namespaces) while Scheme is a Lisp-1 (having a combined
+addressed.
+
+Additionally, CL is a Lisp-2 (having separate variable and function
+namespaces) while Scheme is a Lisp-1 (having a combined
 variable-and-function namespace), meaning that the Scheme code should
 be able to create a second, function-namespace binding that the CL can
 call into. This would be desirable, anyway, because CL calling into
 Scheme needs to add a trampoline at the entry point. [Wikipedia
 explains dynamic scope in
 detail.](https://en.wikipedia.org/wiki/Scope_(computer_science)#Dynamic_scoping)
+
+### Type system
+
+Technically, Common Lisp isn't just a "Lisp-2". It actually has more
+than two namespaces. The third most popular namespace is the *type*
+namespace, used by types defined by `defclass`, `deftype`, etc. One
+possible solution is to introduce this type namespace to Scheme, but
+standard Scheme is primarily typed by predicates. These could be seen
+as `satisfies` types in CL, but those are inefficient. The simplest
+efficient solution, then, is to have a `define-scheme-type` macro that
+defines both a type and a predicate of the same name (e.g. `pair?`).
+Normally, the generated predicate can just call `typep`, but there are
+quite a few special cases.
+
+Technically speaking, this type namespace still exists and could be
+accessed through an exposed `type?` predicate in Scheme. For example,
+`(type? foo 'pair?)` would be `#t` if `foo` is a `pair?` even if
+`pair?` has been locally rebound in a `let`.
+
+### Continuations
 
 Common Lisp does not have Scheme-style continuations. This means that
 even if Common Lisp `lambda`s are used in the compilation process, the
