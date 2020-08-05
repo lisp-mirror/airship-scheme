@@ -20,6 +20,11 @@ the NIL that CL expects to be the false value.
 "
   (if (eq item '%scheme-boolean:f) nil item))
 
+(define-function (%invert-case :inline t :return character) ((character character))
+  (cond ((upper-case-p character) (char-downcase character))
+        ((lower-case-p character) (char-upcase character))
+        (t character)))
+
 (define-function (invert-case :return simple-string) ((simple-string simple-string))
   "
 Inverts the case of a string, representing a symbol name, for maximum
@@ -29,10 +34,7 @@ will allow case sensitivity in Scheme while still keeping the symbols
 in a form that CL expects.
 "
   (map 'simple-string
-       (lambda (c)
-         (cond ((upper-case-p c) (char-downcase c))
-               ((lower-case-p c) (char-upcase c))
-               (t c)))
+       #'%invert-case
        simple-string))
 
 (define-function (scheme-symbol-name :inline t) ((symbol symbol))
