@@ -121,10 +121,6 @@
            %scheme-boolean:f
            (error "Invalid character(s) after #f"))))))
 
-;;; TODO: Check for balanced parentheses before EOF. That is, if
-;;; recursive? then end on ) and not EOF. If not recursive? then end
-;;; on EOF and not )
-;;;
 ;;; TODO: ' ` , ,@ .
 ;;;
 ;;; TODO: non-integer numbers
@@ -137,7 +133,8 @@
 ;;; base-10 integers), whitespace (ignored), parentheses (used for the
 ;;; recursion) or part of line comments (ignored) into lists.
 (defun scheme-read (stream &optional recursive?)
-  (loop :for match := (read-scheme-character stream)
+  (loop :for old := nil :then match
+        :for match := (read-scheme-character stream)
         :for temp := nil
         :until (or (and recursive?
                         (eql match #\)))
@@ -158,4 +155,7 @@
                             (read-scheme-integer stream))
                            (t match))
         :when temp
-          :collect temp))
+          :collect temp
+        :finally (when (or (and recursive? (not match))
+                           (and (not recursive?) (eql old #\))))
+                   (error "Imbalanced parentheses."))))
