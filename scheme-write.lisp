@@ -10,16 +10,18 @@
        (if (> *print-base* 10)
            (format stream "~A" (string-downcase (format nil "~A" number)))
            (format stream "~A" number)))
-      ;; Note: This doesn't round-trip floats to the same floating
-      ;; point type at the moment. Every float is read in as a double.
-      (float (let ((*read-default-float-format* (type-of number)))
+      (float (let ((*read-default-float-format* 'double-float))
                (cond ((infinitep number)
-                      (if (plusp number)
-                          (write-string "+inf.0" stream)
-                          (write-string "-inf.0" stream)))
-                     ;; TODO: is there a NaN sign test?
-                     ((nanp number) (write-string "+nan.0" stream))
-                     (t (format stream "~A" number)))))
+                      (format stream
+                              "~:[-~;+~]inf.0~:[~;f0~]"
+                              (plusp number)
+                              (typep number 'single-float)))
+                     ((nanp number)
+                      (format stream
+                              "+nan.0~:[~;f0~]"
+                              (typep number 'single-float)))
+                     (t
+                      (format stream "~A" number)))))
       (complex
        (write-scheme-number (realpart number) stream *print-base*)
        (when (plusp (imagpart number))
