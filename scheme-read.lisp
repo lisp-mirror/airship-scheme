@@ -60,8 +60,8 @@
 ;;; Reads a string starting after the initial " that enters the string
 ;;; reader. A string must end on a non-escaped ".
 ;;;
-;;; TODO: Implement the other kinds of escape beyond \" and \\ as well
-;;; as any other missing string features
+;;; TODO: Implement the other kinds of escape as well as any other
+;;; missing string features
 (defun %read-string (stream)
   (loop :for match := (read-case (stream x)
                         (:eof nil)
@@ -77,7 +77,14 @@
                    (and (not after-escape?)
                         (eql match #\")))
         :unless escape?
-          :do (vector-push-extend match buffer)
+          :do (if after-escape?
+                  (vector-push-extend (case match
+                                        (#\n (code-char #x000a))
+                                        (#\t (code-char #x0009))
+                                        (#\r (code-char #x000d))
+                                        (t match))
+                                      buffer)
+                  (vector-push-extend match buffer))
         :finally (return (if match
                              (subseq buffer 0 (fill-pointer buffer))
                              (error "End of file reached before end of string!")))))
