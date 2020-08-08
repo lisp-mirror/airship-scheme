@@ -89,8 +89,7 @@
                              (subseq buffer 0 (fill-pointer buffer))
                              (error "End of file reached before end of string!")))))
 
-;;; Only these can follow #t, #true, #f, or #false
-(define-function (%end-of-special? :inline t) (stream)
+(define-function (%end-of-token? :inline t) (stream)
   (member (peek-char nil stream nil :eof)
           '(#\Space #\Newline #\) #\; #\Tab :eof)))
 
@@ -110,29 +109,48 @@
        (read-block-comment stream))
       ;; #t or #true is true
       (:maybe-true
-       (if (or (%end-of-special? stream)
+       (if (or (%end-of-token? stream)
                (and (loop :for c* :across "rue"
                           :for c := (read-char stream nil nil)
                           :always (and c (eql c c*)))
-                    (%end-of-special? stream)))
+                    (%end-of-token? stream)))
            t
            (error "Invalid character(s) after #t")))
       ;; #f or #false is false
       (:maybe-false
-       (if (or (%end-of-special? stream)
+       (if (or (%end-of-token? stream)
                (and (loop :for c* :across "alse"
                           :for c := (read-char stream nil nil)
                           :do (print c)
                           :always (and c (eql c c*)))
-                    (%end-of-special? stream)))
+                    (%end-of-token? stream)))
            %scheme-boolean:f
            (error "Invalid character(s) after #f"))))))
 
-;;; TODO: ' ` , ,@ .
+(defun read-scheme-symbol (stream &optional (package *package*))
+  (loop :for char := (read-case (stream c)
+                       ((:or #\Space #\Newline #\) #\; #\Tab)
+                        (unread-char c stream)
+                        nil)
+                       (:eof nil)
+                       (t c))
+        :with buffer := (make-array 16
+                                    :element-type 'character
+                                    :adjustable t
+                                    :fill-pointer 0)
+        :while char
+        :do (vector-push-extend (%invert-case char) buffer)
+        :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
+                                 package))))
+
+;;; TODO: ' ` , ,@
+;;;
+;;; TODO: dotted lists
 ;;;
 ;;; TODO: non-integer numbers
 ;;;
-;;; TODO: symbols and |escaped symbols|
+;;; TODO: symbols and |escaped symbols| (note that "1foo" could exist
+;;; as a symbol)
 ;;;
 ;;; TODO: everything else
 ;;;
@@ -140,29 +158,33 @@
 ;;; base-10 integers), whitespace (ignored), parentheses (used for the
 ;;; recursion) or part of line comments (ignored) into lists.
 (defun scheme-read (stream &optional recursive?)
-  (loop :for old := nil :then match
-        :for match := (read-scheme-character stream)
-        :for temp := nil
-        :until (or (and recursive?
-                        (eql match #\)))
-                   (null match))
-        :if (eql match :comment)
-          :do (read-line-comment stream)
-        :else
-          :if (eql match :special)
-            :do (setf temp (read-special stream))
-        :else
-          :if (not (or (eql match :whitespace) (eql match :newline)))
-            :collect (cond ((eql match #\()
-                            (scheme-read stream t))
-                           ((eql match #\")
-                            (%read-string stream))
-                           ((and (characterp match) (char<= #\0 match #\9))
-                            (unread-char match stream)
-                            (read-scheme-integer stream))
-                           (t match))
-        :when temp
-          :collect temp
-        :finally (when (or (and recursive? (not match))
-                           (and (not recursive?) (eql old #\))))
-                   (error "Imbalanced parentheses."))))
+  (flet ((reader-branch (match)
+           (cond ((eql match #\()
+                  (scheme-read stream t))
+                 ((eql match #\")
+                  (%read-string stream))
+                 ((and (characterp match) (char<= #\0 match #\9))
+                  (unread-char match stream)
+                  (read-scheme-integer stream))
+                 (t
+                  (unread-char match stream)
+                  (read-scheme-symbol stream)))))
+    (loop :for old := nil :then match
+          :for match := (read-scheme-character stream)
+          :for temp := nil
+          :until (or (and recursive?
+                          (eql match #\)))
+                     (null match))
+          :if (eql match :comment)
+            :do (read-line-comment stream)
+          :else
+            :if (eql match :special)
+              :do (setf temp (read-special stream))
+          :else
+            :if (not (or (eql match :whitespace) (eql match :newline)))
+              :collect (reader-branch match)
+          :when temp
+            :collect temp
+          :finally (when (or (and recursive? (not match))
+                             (and (not recursive?) (eql old #\))))
+                     (error "Imbalanced parentheses.")))))
