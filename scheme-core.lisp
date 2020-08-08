@@ -20,6 +20,14 @@ the NIL that CL expects to be the false value.
 "
   (if (eq item '%scheme-boolean:f) nil item))
 
+;;; Note: This is intentionally not a Unicode-friendly case inversion.
+;;; This is a case inversion that is compatible with the upcasing done
+;;; by a Common Lisp reader. This is ideally a self-inverse function.
+;;; Respecting Unicode rules would mean, e.g. sigma and final sigma
+;;; would have the same upper case form.
+;;;
+;;; If the assumption is false in the major CL implementations, then
+;;; more complicated logic would need to be done.
 (define-function (%invert-case :inline t :return character) ((character character))
   (cond ((upper-case-p character) (char-downcase character))
         ((lower-case-p character) (char-upcase character))
