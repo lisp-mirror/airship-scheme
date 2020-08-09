@@ -136,16 +136,9 @@
 ;;; TODO: non-integer numbers, including the possibility that symbols
 ;;; start with integers, such as '1foo
 ;;;
-;;; TODO: make sure . is really . because .., ..., etc., are all valid
-;;; symbols instead of failed attempts at writing dotted lists
-;;;
 ;;; TODO: |escaped symbols|
 ;;;
 ;;; TODO: everything else
-;;;
-;;; Recursively collects all characters that aren't integers (read as
-;;; base-10 integers), whitespace (ignored), parentheses (used for the
-;;; recursion) or part of line comments (ignored) into lists.
 (defun scheme-read (stream &optional recursive?)
   (flet ((read-scheme-character (stream)
            (read-case (stream match)
@@ -159,7 +152,11 @@
              (#\# (read-special stream))
              (#\; (read-line-comment stream))
              (:eof :eof)
-             (#\. #\.)
+             (#\. (if (char= #\. (peek-char nil stream))
+                      (progn
+                        (unread-char match stream)
+                        (read-scheme-symbol stream))
+                      #\.))
              (t
               (unread-char match stream)
               (read-scheme-symbol stream)))))
@@ -184,10 +181,13 @@
             :collect match :into s-expression
           :else
             :if (and (not (eql match :whitespace)) after-dotted?)
-              :do (if dotted-end?
-                      (error "Invalid dotted list syntax.")
-                      (setf dotted-end match
-                            dotted-end? t))
+              :do (cond (dotted-end?
+                         (error "Invalid dotted list syntax. More than one item after a dot in a dotted list."))
+                        ((eql match #\.)
+                         (error "Invalid dotted list syntax. More than one dot in a list."))
+                        (t
+                         (setf dotted-end match
+                               dotted-end? t)))
           :finally (cond ((or (and recursive? (eql match :eof))
                               (and (not recursive?) (eql old #\))))
                           (error "Imbalanced parentheses."))
