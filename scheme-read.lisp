@@ -155,7 +155,7 @@
              ((:range #\0 #\9)
               (unread-char match stream)
               (read-scheme-integer stream))
-             ((:or #\Newline #\Space #\Tab) nil)
+             ((:or #\Newline #\Space #\Tab) :whitespace)
              (#\# (read-special stream))
              (#\; (read-line-comment stream))
              (:eof :eof)
@@ -169,28 +169,37 @@
                                     old)
           :for match := (read-scheme-character stream)
           :for after-dotted? := nil :then (or dotted? after-dotted?)
-          :for dotted? := (eql match #\.)
+          :for dotted? := (and (eql match #\.)
+                               (or (and s-expression before-dotted?)
+                                   (error "Invalid dotted list syntax. An expression needs an item before the dot.")))
+          :for before-dotted? := (eql match :whitespace)
           :with dotted-end := nil
+          :with dotted-end? := nil
           :until (or (and recursive?
                           (eql match #\)))
                      (eql match :eof))
-          :if (and match
+          :if (and (not (eql match :whitespace))
                    (not dotted?)
                    (not after-dotted?))
             :collect match :into s-expression
           :else
-            :if (and match after-dotted?)
-              :do (if dotted-end
+            :if (and (not (eql match :whitespace)) after-dotted?)
+              :do (if dotted-end?
                       (error "Invalid dotted list syntax.")
-                      (setf dotted-end match))
-          :finally (if (or (and recursive? (eql match :eof))
-                           (and (not recursive?) (eql old #\))))
-                       (error "Imbalanced parentheses.")
-                       ;; Note: This isn't an efficient way to make a
-                       ;; dotted list, but is the efficient way worth
-                       ;; the added cost when building proper lists?
-                       (return (if dotted-end
-                                   (progn
-                                     (setf (cdr (last s-expression)) dotted-end)
-                                     s-expression)
-                                   s-expression))))))
+                      (setf dotted-end match
+                            dotted-end? t))
+          :finally (cond ((or (and recursive? (eql match :eof))
+                              (and (not recursive?) (eql old #\))))
+                          (error "Imbalanced parentheses."))
+                         ((and after-dotted? (not dotted-end?))
+                          (error "Invalid dotted list syntax. An expression needs an item after the dot."))
+                         ;; Note: This isn't an efficient way to make
+                         ;; a dotted list, but is the efficient way
+                         ;; worth the added cost when building proper
+                         ;; lists?
+                         (t
+                          (return (if dotted-end?
+                                      (progn
+                                        (setf (cdr (last s-expression)) dotted-end)
+                                        s-expression)
+                                      s-expression)))))))
