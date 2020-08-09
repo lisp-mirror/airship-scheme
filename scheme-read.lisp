@@ -21,18 +21,6 @@
         :do (setf number (+ match (* number radix)))
         :finally (return (values number length))))
 
-;;; Reads a character while not in a special state, i.e. it is outside
-;;; of a string, a number, etc.
-(defun read-scheme-character (stream)
-  (read-case (stream x)
-    (#\Newline :newline)
-    ((:or #\Space #\Tab) :whitespace)
-    (#\# :special)
-    (#\\ :escape)
-    (#\; :comment)
-    (:eof nil)
-    (t x)))
-
 (defun read-line-comment (stream)
   (loop :for match := (read-case (stream c)
                         (#\Newline :newline)
@@ -145,12 +133,13 @@
 
 ;;; TODO: ' ` , ,@
 ;;;
-;;; TODO: dotted lists
+;;; TODO: non-integer numbers, including the possibility that symbols
+;;; start with integers, such as '1foo
 ;;;
-;;; TODO: non-integer numbers
+;;; TODO: make sure . is really . because .., ..., etc., are all valid
+;;; symbols instead of failed attempts at writing dotted lists
 ;;;
-;;; TODO: symbols and |escaped symbols| (note that "1foo" could exist
-;;; as a symbol)
+;;; TODO: |escaped symbols|
 ;;;
 ;;; TODO: everything else
 ;;;
@@ -158,33 +147,50 @@
 ;;; base-10 integers), whitespace (ignored), parentheses (used for the
 ;;; recursion) or part of line comments (ignored) into lists.
 (defun scheme-read (stream &optional recursive?)
-  (flet ((reader-branch (match)
-           (cond ((eql match #\()
-                  (scheme-read stream t))
-                 ((eql match #\")
-                  (%read-string stream))
-                 ((and (characterp match) (char<= #\0 match #\9))
-                  (unread-char match stream)
-                  (read-scheme-integer stream))
-                 (t
-                  (unread-char match stream)
-                  (read-scheme-symbol stream)))))
-    (loop :for old := nil :then match
+  (flet ((read-scheme-character (stream)
+           (read-case (stream match)
+             (#\( (scheme-read stream t))
+             (#\) #\))
+             (#\" (%read-string stream))
+             ((:range #\0 #\9)
+              (unread-char match stream)
+              (read-scheme-integer stream))
+             ((:or #\Newline #\Space #\Tab) nil)
+             (#\# (read-special stream))
+             (#\; (read-line-comment stream))
+             (:eof :eof)
+             (#\. #\.)
+             (t
+              (unread-char match stream)
+              (read-scheme-symbol stream)))))
+    (loop :for old := nil :then (if (and match
+                                         (not (eql match #\.)))
+                                    match
+                                    old)
           :for match := (read-scheme-character stream)
-          :for temp := nil
+          :for after-dotted? := nil :then (or dotted? after-dotted?)
+          :for dotted? := (eql match #\.)
+          :with dotted-end := nil
           :until (or (and recursive?
                           (eql match #\)))
-                     (null match))
-          :if (eql match :comment)
-            :do (read-line-comment stream)
+                     (eql match :eof))
+          :if (and match
+                   (not dotted?)
+                   (not after-dotted?))
+            :collect match :into s-expression
           :else
-            :if (eql match :special)
-              :do (setf temp (read-special stream))
-          :else
-            :if (not (or (eql match :whitespace) (eql match :newline)))
-              :collect (reader-branch match)
-          :when temp
-            :collect temp
-          :finally (when (or (and recursive? (not match))
-                             (and (not recursive?) (eql old #\))))
-                     (error "Imbalanced parentheses.")))))
+            :if (and match after-dotted?)
+              :do (if dotted-end
+                      (error "Invalid dotted list syntax.")
+                      (setf dotted-end match))
+          :finally (if (or (and recursive? (eql match :eof))
+                           (and (not recursive?) (eql old #\))))
+                       (error "Imbalanced parentheses.")
+                       ;; Note: This isn't an efficient way to make a
+                       ;; dotted list, but is the efficient way worth
+                       ;; the added cost when building proper lists?
+                       (return (if dotted-end
+                                   (progn
+                                     (setf (cdr (last s-expression)) dotted-end)
+                                     s-expression)
+                                   s-expression))))))
