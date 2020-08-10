@@ -83,39 +83,35 @@
   (member (peek-char nil stream nil :eof)
           '(#\Space #\Newline #\) #\; #\Tab :eof)))
 
-;;; TODO: vectors, bytevectors, #; comments, directives, characters,
-;;; numeric exactness, numeric radixes, labels, etc.
+;;; TODO: bytevectors, #; comments, directives, characters, numeric
+;;; exactness, numeric radixes, labels, etc.
 (defun read-special (stream)
-  (let ((start (read-case (stream x)
-                 (#\| :block-comment)
-                 (#\t :maybe-true)
-                 (#\f :maybe-false)
-                 (:eof :eof)
-                 (t x))))
-    (case start
-      (:eof
-       (error "End of file after # when another character was expected!"))
-      (:block-comment
-       (read-block-comment stream))
-      ;; #t or #true is true
-      (:maybe-true
-       (if (or (%end-of-token? stream)
-               (and (loop :for c* :across "rue"
-                          :for c := (read-char stream nil nil)
-                          :always (and c (eql c c*)))
-                    (%end-of-token? stream)))
-           t
-           (error "Invalid character(s) after #t")))
-      ;; #f or #false is false
-      (:maybe-false
-       (if (or (%end-of-token? stream)
-               (and (loop :for c* :across "alse"
-                          :for c := (read-char stream nil nil)
-                          :do (print c)
-                          :always (and c (eql c c*)))
-                    (%end-of-token? stream)))
-           %scheme-boolean:f
-           (error "Invalid character(s) after #f"))))))
+  (read-case (stream x)
+    (#\|
+     (read-block-comment stream))
+    (#\t
+     (if (or (%end-of-token? stream)
+             (and (loop :for c* :across "rue"
+                        :for c := (read-char stream nil nil)
+                        :always (and c (eql c c*)))
+                  (%end-of-token? stream)))
+         t
+         (error "Invalid character(s) after #t")))
+    (#\f
+     (if (or (%end-of-token? stream)
+             (and (loop :for c* :across "alse"
+                        :for c := (read-char stream nil nil)
+                        :always (and c (eql c c*)))
+                  (%end-of-token? stream)))
+         %scheme-boolean:f
+         (error "Invalid character(s) after #f")))
+    (#\(
+     (let ((s-expression (scheme-read stream t)))
+       (make-array (length s-expression) :initial-contents s-expression)))
+    (:eof
+     (error "End of file after # when another character was expected!"))
+    (t
+     (error "Reader syntax #~A is not supported!" x))))
 
 (defun read-scheme-symbol (stream &optional (package *package*))
   (loop :for char := (read-case (stream c)
