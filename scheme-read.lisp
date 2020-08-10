@@ -26,7 +26,8 @@
                         (#\Newline :newline)
                         (:eof :eof)
                         (t nil))
-        :until match))
+        :until match
+        :finally (return :skip)))
 
 (defun read-block-comment (stream)
   (loop :for prior-match := nil :then match
@@ -42,8 +43,9 @@
         :when (and (eql prior-match :special)
                    (eql match :pipe))
           :do (read-block-comment stream)
-        :finally (unless match
-                   (error "End of file inside of a block comment!"))))
+        :finally (if match
+                     (return :skip)
+                     (error "End of file inside of a block comment!"))))
 
 ;;; Reads a string starting after the initial " that enters the string
 ;;; reader. A string must end on a non-escaped ".
@@ -148,7 +150,7 @@
              ((:range #\0 #\9)
               (unread-char match stream)
               (read-scheme-integer stream))
-             ((:or #\Newline #\Space #\Tab) :whitespace)
+             ((:or #\Newline #\Space #\Tab) :skip)
              (#\# (read-special stream))
              (#\; (read-line-comment stream))
              (:eof :eof)
@@ -169,18 +171,18 @@
           :for dotted? := (and (eql match #\.)
                                (or (and s-expression before-dotted?)
                                    (error "Invalid dotted list syntax. An expression needs an item before the dot.")))
-          :for before-dotted? := (eql match :whitespace)
+          :for before-dotted? := (eql match :skip)
           :with dotted-end := nil
           :with dotted-end? := nil
           :until (or (and recursive?
                           (eql match #\)))
                      (eql match :eof))
-          :if (and (not (eql match :whitespace))
+          :if (and (not (eql match :skip))
                    (not dotted?)
                    (not after-dotted?))
             :collect match :into s-expression
           :else
-            :if (and (not (eql match :whitespace)) after-dotted?)
+            :if (and (not (eql match :skip)) after-dotted?)
               :do (cond (dotted-end?
                          (error "Invalid dotted list syntax. More than one item after a dot in a dotted list."))
                         ((eql match #\.)
