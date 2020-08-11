@@ -79,9 +79,9 @@
                              (subseq buffer 0 (fill-pointer buffer))
                              (error "End of file reached before end of string!")))))
 
-(define-function (%end-of-token? :inline t) (stream)
+(define-function (%delimiter? :inline t) (stream)
   (member (peek-char nil stream nil :eof)
-          '(#\Space #\Newline #\) #\; #\Tab :eof)))
+          '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
 
 ;;; TODO: bytevectors, #; comments, directives, characters, numeric
 ;;; exactness, numeric radixes, labels, etc.
@@ -90,19 +90,19 @@
     (#\|
      (read-block-comment stream))
     (#\t
-     (if (or (%end-of-token? stream)
+     (if (or (%delimiter? stream)
              (and (loop :for c* :across "rue"
                         :for c := (read-char stream nil nil)
                         :always (and c (eql c c*)))
-                  (%end-of-token? stream)))
+                  (%delimiter? stream)))
          t
          (error "Invalid character(s) after #t")))
     (#\f
-     (if (or (%end-of-token? stream)
+     (if (or (%delimiter? stream)
              (and (loop :for c* :across "alse"
                         :for c := (read-char stream nil nil)
                         :always (and c (eql c c*)))
-                  (%end-of-token? stream)))
+                  (%delimiter? stream)))
          %scheme-boolean:f
          (error "Invalid character(s) after #f")))
     (#\(
@@ -115,7 +115,11 @@
 
 (defun read-scheme-symbol (stream &optional (package *package*))
   (loop :for char := (read-case (stream c)
-                       ((:or #\Space #\Newline #\) #\; #\Tab)
+                       (#\(
+                        (warn "Style warning: There should be a space before a \"(\" if it is directly following a symbol.")
+                        (unread-char c stream)
+                        nil)
+                       ((:or #\" #\Space #\Newline #\) #\; #\Tab)
                         (unread-char c stream)
                         nil)
                        (:eof nil)
@@ -131,8 +135,7 @@
 
 ;;; TODO: ' ` , ,@
 ;;;
-;;; TODO: non-integer numbers, including the possibility that symbols
-;;; start with integers, such as '1foo
+;;; TODO: non-integer numbers
 ;;;
 ;;; TODO: |escaped symbols|
 ;;;
