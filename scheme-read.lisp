@@ -2,10 +2,16 @@
 
 (cl:in-package #:airship-scheme)
 
+;;; TODO: case insensitivity, where valid
+;;;
+;;; TODO: Invalid identifier starts need to be invalid.
+
 ;;; Reads an integer of the given radix
 ;;;
 ;;; TODO: Call from read-scheme-number to handle all of the special
 ;;; syntax of Scheme numbers. Determine if it is a syntax error there.
+;;; The entry point might be # or - or + or a digit and potentially
+;;; other things.
 (defun read-scheme-integer (stream &optional (radix 10))
   (check-type radix (integer 2 16))
   (loop :for match := (read-case (stream x)
@@ -50,8 +56,7 @@
 ;;; Reads a string starting after the initial " that enters the string
 ;;; reader. A string must end on a non-escaped ".
 ;;;
-;;; TODO: Implement the other kinds of escape as well as any other
-;;; missing string features
+;;; TODO: Any missing string features
 (defun %read-string (stream)
   (loop :for match := (read-case (stream x)
                         (:eof nil)
@@ -67,6 +72,7 @@
                    (and (not after-escape?)
                         (eql match #\")))
         :unless escape?
+          ;; TODO: More escapes; turn it into a separate function.
           :do (if after-escape?
                   (vector-push-extend (case match
                                         (#\n (code-char #x000a))
@@ -113,6 +119,28 @@
     (t
      (error "Reader syntax #~A is not supported!" x))))
 
+(defun read-escaped-scheme-symbol (stream &optional (package *package*))
+  (loop :for after-escape? := nil :then escape?
+        :for char := (read-case (stream c)
+                       (#\| (if after-escape? c nil))
+                       (#\\ (if after-escape? c :escape))
+                       (:eof
+                        (error "Escaped symbol never closed."))
+                       ;; TODO: handle other necessary escapes
+                       (t (if after-escape?
+                              (%invert-case c)
+                              (%invert-case c))))
+        :for escape? := (eql char :escape)
+        :with buffer := (make-array 16
+                                    :element-type 'character
+                                    :adjustable t
+                                    :fill-pointer 0)
+        :while char
+        :unless escape?
+          :do (vector-push-extend char buffer)
+        :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
+                                 package))))
+
 (defun read-scheme-symbol (stream &optional (package *package*))
   (loop :for char := (read-case (stream c)
                        (#\(
@@ -123,23 +151,28 @@
                         (unread-char c stream)
                         nil)
                        (:eof nil)
-                       (t c))
+                       (t (%invert-case c)))
         :with buffer := (make-array 16
                                     :element-type 'character
                                     :adjustable t
                                     :fill-pointer 0)
         :while char
-        :do (vector-push-extend (%invert-case char) buffer)
+        :do (vector-push-extend char buffer)
         :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
                                  package))))
 
-;;; TODO: ' ` , ,@
+(defun quote-item (item n)
+  (if (eql item :eof)
+      (error "An EOF cannot be quoted.")
+      (loop :repeat n
+            :for quoted := `',item :then `',quoted
+            :finally (return quoted))))
+
+;;; TODO: ` , ,@
 ;;;
 ;;; TODO: non-integer numbers
 ;;;
-;;; TODO: |escaped symbols|
-;;;
-;;; TODO: everything else
+;;; TODO: Reread R7RS.pdf and chapter 7
 (defun scheme-read (stream &optional recursive?)
   (flet ((read-scheme-character (stream)
            (read-case (stream match)
@@ -151,7 +184,9 @@
               (read-scheme-integer stream))
              ((:or #\Newline #\Space #\Tab) :skip)
              (#\# (read-special stream))
+             (#\' :inc-quoted)
              (#\; (read-line-comment stream))
+             (#\| (read-escaped-scheme-symbol stream))
              (:eof :eof)
              (#\. (if (char= #\. (peek-char nil stream))
                       (progn
@@ -160,16 +195,32 @@
                       #\.))
              (t
               (unread-char match stream)
-              (read-scheme-symbol stream)))))
+              (read-scheme-symbol stream))))
+         (dotted? (match s-expression quoted?)
+           (and (eql match #\.)
+                (cond ((not recursive?)
+                       (error "The dotted list syntax must be used inside of a list."))
+                      (quoted?
+                       (error "A \".\" cannot follow a \"'\"."))
+                      (s-expression
+                       t)
+                      (t
+                       (error "Invalid dotted list syntax. An expression needs an item before the dot."))))))
     (loop :for old := nil :then (if (and match
                                          (not (eql match #\.)))
                                     match
                                     old)
           :for match := (read-scheme-character stream)
+          :for prior-quote-level := 0 :then quote-level
+          :for quote-level := (cond ((eql match :skip)
+                                     (or quote-level 0))
+                                    ((eql match :inc-quoted)
+                                     (progn
+                                       (setf match :skip)
+                                       (1+ (or quote-level 0))))
+                                    (t 0))
           :for after-dotted? := nil :then (or dotted? after-dotted?)
-          :for dotted? := (and (eql match #\.)
-                               (or (and s-expression before-dotted?)
-                                   (error "Invalid dotted list syntax. An expression needs an item before the dot.")))
+          :for dotted? := (and (dotted? match s-expression (plusp prior-quote-level)) before-dotted?)
           :for before-dotted? := (eql match :skip)
           :with dotted-end := nil
           :with dotted-end? := nil
@@ -179,7 +230,10 @@
           :if (and (not (eql match :skip))
                    (not dotted?)
                    (not after-dotted?))
-            :collect match :into s-expression
+            :collect (if (zerop prior-quote-level)
+                         match
+                         (quote-item match prior-quote-level))
+              :into s-expression
           :else
             :if (and (not (eql match :skip)) after-dotted?)
               :do (cond (dotted-end?
