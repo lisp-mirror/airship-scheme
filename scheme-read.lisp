@@ -89,8 +89,13 @@
   (member (peek-char nil stream nil :eof)
           '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
 
-;;; TODO: bytevectors, #; comments, directives, characters, numeric
-;;; exactness, numeric radixes, labels, etc.
+;;; TODO: bytevectors, #; comments, directives, characters, labels
+;;;
+;;; TODO: If #e then read the next token and force (exact ...) on the
+;;; result. Do the same for #i but with (inexact ...). This might come
+;;; before or might come after the radix prefix, which is much
+;;; simpler, especially since those must be rationals or exact
+;;; integers.
 (defun read-special (stream)
   (read-case (stream x)
     (#\|
@@ -111,6 +116,28 @@
                   (%delimiter? stream)))
          %scheme-boolean:f
          (error "Invalid character(s) after #f")))
+    ;; TODO: Should comments be allowed between the #u8 and the ()?
+    ;; Chibi allows it, but the standard might not require it. Chibi
+    ;; also permits #u8 "hello" which seems clearly incorrect
+    (#\u
+     (read-case (stream c)
+       (#\8 (loop :for c := (read-case (stream c)
+                              ((:or #\Space #\Tab #\Newline) nil)
+                              (#\( t)
+                              (:eof (error "\"(\" expected, but end of file reached."))
+                              (t (error "\"(\" expected, but ~A was read." c)))
+                  :until c
+                  :finally
+                     (return
+                       (let ((s-expression (scheme-read stream t)))
+                         ;; TODO: type checking before this point will
+                         ;; give a more useful error message...
+                         ;; perhaps as a special read path that only
+                         ;; reads numbers.
+                         (make-array (length s-expression) :initial-contents s-expression
+                                                           :element-type 'octet)))))
+       (:eof (error "#u8 expected, but end of file reached."))
+       (t (error "#u8 expected, but #u~A was read." c))))
     (#\(
      (let ((s-expression (scheme-read stream t)))
        (make-array (length s-expression) :initial-contents s-expression)))
@@ -220,7 +247,10 @@
                                        (1+ (or quote-level 0))))
                                     (t 0))
           :for after-dotted? := nil :then (or dotted? after-dotted?)
-          :for dotted? := (and (dotted? match s-expression (plusp prior-quote-level)) before-dotted?)
+          :for dotted? := (and (dotted? match
+                                        s-expression
+                                        (plusp prior-quote-level))
+                               before-dotted?)
           :for before-dotted? := (eql match :skip)
           :with dotted-end := nil
           :with dotted-end? := nil
