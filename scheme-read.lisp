@@ -53,10 +53,24 @@
                      (return :skip)
                      (error "End of file inside of a block comment!"))))
 
+(define-function (%one-char-escape :inline t) (char)
+  (case char
+    (#\n (code-char #x000a))
+    (#\t (code-char #x0009))
+    (#\a (code-char #x0007))
+    (#\b (code-char #x0008))
+    (#\r (code-char #x000d))
+    ;; Note: \", \\, and \| are specified. The rest are unspecified,
+    ;; but use the CL approach of returning the character itself
+    ;; rather than having an error. That's what this path represents.
+    (t char)))
+
 ;;; Reads a string starting after the initial " that enters the string
 ;;; reader. A string must end on a non-escaped ".
 ;;;
-;;; TODO: Any missing string features
+;;; TODO: any missing escapes (i.e. hex char and multiline)
+;;;
+;;; TODO: The escapes are all shared with |foo| symbols aren't they?
 (defun %read-string (stream)
   (loop :for match := (read-case (stream x)
                         (:eof nil)
@@ -72,14 +86,8 @@
                    (and (not after-escape?)
                         (eql match #\")))
         :unless escape?
-          ;; TODO: More escapes; turn it into a separate function.
           :do (if after-escape?
-                  (vector-push-extend (case match
-                                        (#\n (code-char #x000a))
-                                        (#\t (code-char #x0009))
-                                        (#\r (code-char #x000d))
-                                        (t match))
-                                      buffer)
+                  (vector-push-extend (%one-char-escape match) buffer)
                   (vector-push-extend match buffer))
         :finally (return (if match
                              (subseq buffer 0 (fill-pointer buffer))
@@ -89,13 +97,13 @@
   (member (peek-char nil stream nil :eof)
           '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
 
-;;; TODO: bytevectors, #; comments, directives, characters, labels
+;;; TODO: #; comments, directives, characters, labels
 ;;;
 ;;; TODO: If #e then read the next token and force (exact ...) on the
 ;;; result. Do the same for #i but with (inexact ...). This might come
-;;; before or might come after the radix prefix, which is much
-;;; simpler, especially since those must be rationals or exact
-;;; integers.
+;;; before or might come after the radix prefix. The radix prefix s
+;;; much simpler, especially since those must be exact, although
+;;; e.g. #i#x42 is valid.
 (defun read-special (stream)
   (read-case (stream x)
     (#\|
@@ -116,9 +124,6 @@
                   (%delimiter? stream)))
          %scheme-boolean:f
          (error "Invalid character(s) after #f")))
-    ;; TODO: Should comments be allowed between the #u8 and the ()?
-    ;; Chibi allows it, but the standard might not require it. Chibi
-    ;; also permits #u8 "hello" which seems clearly incorrect
     (#\u
      (read-case (stream c)
        (#\8 (loop :for c := (read-case (stream c)
