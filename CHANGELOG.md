@@ -15,6 +15,9 @@ Changelog](https://keepachangelog.com/en/1.0.0/).
    the separate type namespace by creating a predicate for each type
    that is defined, using the predicate's name as the type name, e.g.
    `number?`.
+   - Some efficient, custom types that match CL's type system,
+     including `%list?` for lists that aren't necessarily proper
+     lists.
  - A custom reader for the [R7RS-small] version of Scheme.
  - The number portion of the Scheme writer, as `write-scheme-number`,
    for `number->string`.
@@ -28,8 +31,7 @@ Changelog](https://keepachangelog.com/en/1.0.0/).
  - A substantial number of standard procedures from [R7RS-small]:
    - Almost all of sections 6.1 through 6.9, only excluding
      `rationalize` and `string->number`.
-   - Some standard procedures from later sections, especially basic
-     ports (streams in CL) from section 6.13.
+   - Section 6.13, i.e. ports (streams in CL).
  - Some Scheme libraries:
    - Library definitions for the `(scheme)` libraries described in
      [R7RS-small] Appendix A.
