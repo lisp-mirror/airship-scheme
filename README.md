@@ -26,9 +26,10 @@ key functionality is incomplete.
 
 The language will be usable, although still unstable, in [version
 0.1](https://gitlab.com/mbabich/airship-scheme/-/milestones/4). Until
-then, the versions will be of the form 0.0.n, which allows an
-arbitrary number of unexpected versions to be inserted as new
-complications arise.
+then, the versions will be of the form 0.0.n. After that, the versions
+will be of the form 0.n. That is, the first version is version 0.0.1,
+which will be followed by 0.0.2, and so on. The first usable version
+is version 0.1, which will be followed by 0.2, and so on.
 
 Overview
 --------
@@ -59,15 +60,24 @@ Why use this project?
 
 This project is primarily aimed at both Common Lispers and Schemers.
 
-From the Common Lisp perspective, it offers Scheme as a convenient
-library: it's no harder to install or use than any other CL library.
-From the Scheme perspective, it offers the potential of a
-high-performance implementation for "free" by taking advantage of
-high-performance CL compilers like SBCL. From both perspectives, it
-will allow someone to wrap libraries written for one of the languages
-for the use in the other, which could potentially double the number of
-libraries available. It also allows a level of integration between the
-two languages that's not normally seen.
+### For Common Lispers
+
+It offers Scheme as a convenient library: it's no harder to install or
+use than any other CL library. Most Scheme libraries will be usable in
+Common Lisp, and a lot of core-or-SRFI Scheme functionality will be
+provided in a CL-compatible form. Custom sequences not found in CL
+will be implemented via `trivial-extensible-sequences`. Eventually, a
+reader macro could be provided that provides most of the benefits of
+Scheme's additional syntax while still using the CL reader.
+
+### For Schemers
+
+It offers the potential of getting a high-performance implementation
+for "free" by taking advantage of high-performance CL compilers like
+SBCL. Schemers will be able to wrap libraries written in CL, which
+will more than double the number of libraries available. These wrapped
+CL libraries will feel a lot "Lispier" than wrapped C libraries
+because CL is a closely related programming language.
 
 Installing
 ----------
