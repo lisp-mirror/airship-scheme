@@ -230,8 +230,9 @@
              (t
               (unread-char match stream)
               (read-scheme-symbol stream))))
-         (dotted? (match s-expression quoted?)
+         (dotted? (match s-expression quoted? before-dotted?)
            (and (eql match #\.)
+                before-dotted?
                 (cond ((not recursive?)
                        (error "The dotted list syntax must be used inside of a list."))
                       (quoted?
@@ -239,7 +240,11 @@
                       (s-expression
                        t)
                       (t
-                       (error "Invalid dotted list syntax. An expression needs an item before the dot."))))))
+                       (error "Invalid dotted list syntax. An expression needs an item before the dot.")))))
+         (end-of-read? (match)
+           (or (and recursive?
+                    (eql match #\)))
+               (eql match :eof))))
     (loop :with skip-next := 0
           :for old := nil :then (if (and match
                                          (not (eql match #\.)))
@@ -272,16 +277,14 @@
                                        (1+ (or quote-level 0))))
                                     (t 0))
           :for after-dotted? := nil :then (or dotted? after-dotted?)
-          :for dotted? := (and (dotted? match
-                                        s-expression
-                                        (plusp prior-quote-level))
-                               before-dotted?)
+          :for dotted? := (dotted? match
+                                   s-expression
+                                   (plusp prior-quote-level)
+                                   before-dotted?)
           :for before-dotted? := (eql match :skip)
           :with dotted-end := nil
           :with dotted-end? := nil
-          :until (or (and recursive?
-                          (eql match #\)))
-                     (eql match :eof))
+          :until (end-of-read? match)
           :if (and (not (eql match :skip))
                    (not dotted?)
                    (not after-dotted?))
