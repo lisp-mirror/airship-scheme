@@ -97,7 +97,7 @@
   (member (peek-char nil stream nil :eof)
           '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
 
-;;; TODO: #; comments, directives, characters, labels
+;;; TODO: directives, characters, labels
 ;;;
 ;;; TODO: If #e then read the next token and force (exact ...) on the
 ;;; result. Do the same for #i but with (inexact ...). This might come
@@ -146,6 +146,8 @@
     (#\(
      (let ((s-expression (scheme-read stream t)))
        (make-array (length s-expression) :initial-contents s-expression)))
+    (#\;
+     :skip-next)
     (:eof
      (error "End of file after # when another character was expected!"))
     (t
@@ -238,11 +240,29 @@
                        t)
                       (t
                        (error "Invalid dotted list syntax. An expression needs an item before the dot."))))))
-    (loop :for old := nil :then (if (and match
+    (loop :with skip-next := 0
+          :for old := nil :then (if (and match
                                          (not (eql match #\.)))
                                     match
                                     old)
-          :for match := (read-scheme-character stream)
+          :for match := (let ((match* (read-scheme-character stream)))
+                          (if (eql match* :skip-next)
+                              (progn
+                                (incf skip-next)
+                                :skip)
+                              match*))
+            :then (let ((match* (read-scheme-character stream)))
+                    (cond ((eql match* :skip-next)
+                           (incf skip-next)
+                           :skip)
+                          ((or (eql match* :eof)
+                               (eql match* #\)))
+                           match*)
+                          ((and (not (eql match* :skip))
+                                (plusp skip-next))
+                           (decf skip-next)
+                           :skip)
+                          (t match*)))
           :for prior-quote-level := 0 :then quote-level
           :for quote-level := (cond ((eql match :skip)
                                      (or quote-level 0))
@@ -278,7 +298,9 @@
                         (t
                          (setf dotted-end match
                                dotted-end? t)))
-          :finally (cond ((or (and recursive? (eql match :eof))
+          :finally (cond ((plusp skip-next)
+                          (error "Expected to skip a token to match a #;-style comment, but none found."))
+                         ((or (and recursive? (eql match :eof))
                               (and (not recursive?) (eql old #\))))
                           (error "Imbalanced parentheses."))
                          ((and after-dotted? (not dotted-end?))
