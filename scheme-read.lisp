@@ -244,7 +244,23 @@
          (end-of-read? (match)
            (or (and recursive?
                     (eql match #\)))
-               (eql match :eof))))
+               (eql match :eof)))
+         ;; TODO: Neither of these check for EOF immediately after a dot
+         (check-dot (dotted-end? match)
+           (cond (dotted-end?
+                  (error "Invalid dotted list syntax. More than one item after a dot in a dotted list."))
+                 ((eql match #\.)
+                  (error "Invalid dotted list syntax. More than one dot in a list."))
+                 (t nil)))
+         (check-end (skip-next old match after-dotted? dotted-end?)
+           (cond ((plusp skip-next)
+                  (error "Expected to skip a token to match a #;-style comment, but none found."))
+                 ((or (and recursive? (eql match :eof))
+                      (and (not recursive?) (eql old #\))))
+                  (error "Imbalanced parentheses."))
+                 ((and after-dotted? (not dotted-end?))
+                  (error "Invalid dotted list syntax. An expression needs an item after the dot."))
+                 (t nil))))
     (loop :with skip-next := 0
           :for old := nil :then (if (and match
                                          (not (eql match #\.)))
@@ -294,27 +310,19 @@
               :into s-expression
           :else
             :if (and (not (eql match :skip)) after-dotted?)
-              :do (cond (dotted-end?
-                         (error "Invalid dotted list syntax. More than one item after a dot in a dotted list."))
-                        ((eql match #\.)
-                         (error "Invalid dotted list syntax. More than one dot in a list."))
-                        (t
-                         (setf dotted-end match
-                               dotted-end? t)))
-          :finally (cond ((plusp skip-next)
-                          (error "Expected to skip a token to match a #;-style comment, but none found."))
-                         ((or (and recursive? (eql match :eof))
-                              (and (not recursive?) (eql old #\))))
-                          (error "Imbalanced parentheses."))
-                         ((and after-dotted? (not dotted-end?))
-                          (error "Invalid dotted list syntax. An expression needs an item after the dot."))
-                         ;; Note: This isn't an efficient way to make
-                         ;; a dotted list, but is the efficient way
-                         ;; worth the added cost when building proper
-                         ;; lists?
-                         (t
-                          (return (if dotted-end?
-                                      (progn
-                                        (setf (cdr (last s-expression)) dotted-end)
-                                        s-expression)
-                                      s-expression)))))))
+              :do (progn
+                    (check-dot dotted-end? match)
+                    (setf dotted-end match
+                          dotted-end? t))
+          :finally
+             ;; Note: This isn't an efficient way to make a dotted
+             ;; list, but is the efficient way worth the added cost
+             ;; when building proper lists?
+             (return
+               (progn
+                 (check-end skip-next old match after-dotted? dotted-end?)
+                 (if dotted-end?
+                     (progn
+                       (setf (cdr (last s-expression)) dotted-end)
+                       s-expression)
+                     s-expression))))))
