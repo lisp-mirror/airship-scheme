@@ -202,36 +202,39 @@
             :for quoted := `',item :then `',quoted
             :finally (return quoted))))
 
+(defun read-scheme-character (stream)
+  (read-case (stream match)
+    (#\( (scheme-read stream t))
+    (#\) #\))
+    (#\" (%read-string stream))
+    ((:range #\0 #\9)
+     (unread-char match stream)
+     (read-scheme-integer stream))
+    ((:or #\Newline #\Space #\Tab) :skip)
+    (#\# (read-special stream))
+    (#\' :inc-quoted)
+    (#\; (read-line-comment stream))
+    (#\| (read-escaped-scheme-symbol stream))
+    (:eof :eof)
+    (#\. (case (peek-char nil stream nil :eof)
+           (#\.
+            (unread-char match stream)
+            (read-scheme-symbol stream))
+           (:eof
+            (error "Invalid dotted list syntax. Unexpected EOF."))
+           (t :dot)))
+    (t
+     (unread-char match stream)
+     (read-scheme-symbol stream))))
+
 ;;; TODO: ` , ,@
 ;;;
 ;;; TODO: non-integer numbers
 ;;;
 ;;; TODO: Reread R7RS.pdf and chapter 7
 (defun scheme-read (stream &optional recursive?)
-  (flet ((read-scheme-character (stream)
-           (read-case (stream match)
-             (#\( (scheme-read stream t))
-             (#\) #\))
-             (#\" (%read-string stream))
-             ((:range #\0 #\9)
-              (unread-char match stream)
-              (read-scheme-integer stream))
-             ((:or #\Newline #\Space #\Tab) :skip)
-             (#\# (read-special stream))
-             (#\' :inc-quoted)
-             (#\; (read-line-comment stream))
-             (#\| (read-escaped-scheme-symbol stream))
-             (:eof :eof)
-             (#\. (if (char= #\. (peek-char nil stream))
-                      (progn
-                        (unread-char match stream)
-                        (read-scheme-symbol stream))
-                      #\.))
-             (t
-              (unread-char match stream)
-              (read-scheme-symbol stream))))
-         (dotted? (match s-expression quoted? before-dotted?)
-           (and (eql match #\.)
+  (flet ((dotted? (match s-expression quoted? before-dotted?)
+           (and (eql match :dot)
                 before-dotted?
                 (cond ((not recursive?)
                        (error "The dotted list syntax must be used inside of a list."))
@@ -245,11 +248,10 @@
            (or (and recursive?
                     (eql match #\)))
                (eql match :eof)))
-         ;; TODO: Neither of these check for EOF immediately after a dot
          (check-dot (dotted-end? match)
            (cond (dotted-end?
                   (error "Invalid dotted list syntax. More than one item after a dot in a dotted list."))
-                 ((eql match #\.)
+                 ((eql match :dot)
                   (error "Invalid dotted list syntax. More than one dot in a list."))
                  (t nil)))
          (check-end (skip-next old match after-dotted? dotted-end?)
@@ -263,7 +265,7 @@
                  (t nil))))
     (loop :with skip-next := 0
           :for old := nil :then (if (and match
-                                         (not (eql match #\.)))
+                                         (not (eql match :dot)))
                                     match
                                     old)
           :for match := (let ((match* (read-scheme-character stream)))
