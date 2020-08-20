@@ -2,6 +2,26 @@
 
 (cl:in-package #:airship-scheme)
 
+(define-condition scheme-reader-error (error)
+  ((%details
+    :initarg :details
+    :reader details
+    :initform "An error occurred in the Scheme reader"))
+  (:report (lambda (condition stream)
+             (format stream "~A" (details condition))))
+  (:documentation "An error in the Scheme reader, i.e. invalid syntax."))
+
+(define-condition scheme-reader-eof-error (scheme-reader-error)
+  ((%details
+    :initarg :details
+    :reader details
+    :initform nil))
+  (:report (lambda (condition stream)
+             (format stream "Unexpected EOF read")
+             (when (details condition)
+               (format stream " ~A" (details condition)))))
+  (:documentation "An error in the Scheme reader where an unexpected EOF was read"))
+
 ;;; TODO: case insensitivity, where valid
 ;;;
 ;;; TODO: Invalid identifier starts need to be invalid.
@@ -51,7 +71,8 @@
           :do (read-block-comment stream)
         :finally (if match
                      (return :skip)
-                     (error "End of file inside of a block comment!"))))
+                     (error 'scheme-reader-eof-error
+                            :details "inside of a block comment"))))
 
 (define-function (%one-char-escape :inline t) (char)
   (case char
@@ -91,7 +112,8 @@
                   (vector-push-extend match buffer))
         :finally (return (if match
                              (subseq buffer 0 (fill-pointer buffer))
-                             (error "End of file reached before end of string!")))))
+                             (error 'scheme-reader-eof-error
+                                    :details "inside of a string")))))
 
 (define-function (%delimiter? :inline t) (stream)
   (member (peek-char nil stream nil :eof)
@@ -115,7 +137,8 @@
                         :always (and c (eql c c*)))
                   (%delimiter? stream)))
          t
-         (error "Invalid character(s) after #t")))
+         (error 'scheme-reader-error
+                :details "Invalid character(s) after #t")))
     (#\f
      (if (or (%delimiter? stream)
              (and (loop :for c* :across "alse"
@@ -123,14 +146,17 @@
                         :always (and c (eql c c*)))
                   (%delimiter? stream)))
          %scheme-boolean:f
-         (error "Invalid character(s) after #f")))
+         (error 'scheme-reader-error
+                :details "Invalid character(s) after #f")))
     (#\u
      (read-case (stream c)
        (#\8 (loop :for c := (read-case (stream c)
                               ((:or #\Space #\Tab #\Newline) nil)
                               (#\( t)
-                              (:eof (error "\"(\" expected, but end of file reached."))
-                              (t (error "\"(\" expected, but ~A was read." c)))
+                              (:eof (error 'scheme-reader-eof-error
+                                           :details "when a \"(\" was expected"))
+                              (t (error 'scheme-reader-error
+                                        :details "\"(\" expected, but ~A was read." c)))
                   :until c
                   :finally
                      (return
@@ -141,17 +167,21 @@
                          ;; reads numbers.
                          (make-array (length s-expression) :initial-contents s-expression
                                                            :element-type 'octet)))))
-       (:eof (error "#u8 expected, but end of file reached."))
-       (t (error "#u8 expected, but #u~A was read." c))))
+       (:eof (error 'scheme-reader-eof-error
+                    :details "after #u when an 8 was expected"))
+       (t (error 'scheme-reader-error
+                 :details (format nil "#u8 expected, but #u~A was read." c)))))
     (#\(
      (let ((s-expression (scheme-read stream t)))
        (make-array (length s-expression) :initial-contents s-expression)))
     (#\;
      :skip-next)
     (:eof
-     (error "End of file after # when another character was expected!"))
+     (error 'scheme-reader-eof-error
+            :details "after a # when a character was expected"))
     (t
-     (error "Reader syntax #~A is not supported!" x))))
+     (error 'scheme-reader-error
+            :details (format nil "Reader syntax #~A is not supported!" x)))))
 
 (defun read-escaped-scheme-symbol (stream &optional (package *package*))
   (loop :for after-escape? := nil :then escape?
@@ -159,7 +189,8 @@
                        (#\| (if after-escape? c nil))
                        (#\\ (if after-escape? c :escape))
                        (:eof
-                        (error "Escaped symbol never closed."))
+                        (error 'scheme-reader-eof-error
+                               :details "inside of a |"))
                        ;; TODO: handle other necessary escapes
                        (t (if after-escape?
                               (%invert-case c)
@@ -197,7 +228,9 @@
 
 (defun quote-item (item n)
   (if (eql item :eof)
-      (error "An EOF cannot be quoted.")
+      ;; todo: fixme: this path is never taken
+      (error 'scheme-reader-eof-error
+             :details "after a quote")
       (loop :repeat n
             :for quoted := `',item :then `',quoted
             :finally (return quoted))))
@@ -221,7 +254,8 @@
             (unread-char match stream)
             (read-scheme-symbol stream))
            (:eof
-            (error "Invalid dotted list syntax. Unexpected EOF."))
+            (error 'scheme-reader-eof-error
+                   :details "inside of a dotted list"))
            (t :dot)))
     (t
      (unread-char match stream)
@@ -237,33 +271,41 @@
            (and (eql match :dot)
                 before-dotted?
                 (cond ((not recursive?)
-                       (error "The dotted list syntax must be used inside of a list."))
+                       (error 'scheme-reader-error
+                              :details "The dotted list syntax must be used inside of a list"))
                       (quoted?
-                       (error "A \".\" cannot follow a \"'\"."))
+                       (error 'scheme-reader-error
+                              :details "A \".\" cannot follow a \"'\""))
                       (s-expression
                        t)
                       (t
-                       (error "Invalid dotted list syntax. An expression needs an item before the dot.")))))
+                       (error 'scheme-reader-error
+                              :details "An expression needs an item before the dot in a dotted list")))))
          (end-of-read? (match)
            (or (and recursive?
                     (eql match #\)))
                (eql match :eof)))
          (check-dot (dotted-end? match)
            (cond (dotted-end?
-                  (error "Invalid dotted list syntax. More than one item after a dot in a dotted list."))
+                  (error 'scheme-reader-error
+                         :details "More than one item after a dot in a dotted list"))
                  ((eql match :dot)
-                  (error "Invalid dotted list syntax. More than one dot in a list."))
+                  (error 'scheme-reader-error
+                         :details "More than one dot inside of a dotted list"))
                  (t nil)))
          (check-end (skip-next old match after-dotted? dotted-end?)
            (cond ((plusp skip-next)
-                  (error "Expected to skip a token to match a #;-style comment, but none found."))
+                  (error 'scheme-reader-error
+                         :details "Expected to skip a token to match a #;-style comment, but none found."))
                  ((or (and recursive? (eql match :eof))
                       (and (not recursive?) (eql old #\))))
-                  (error "Imbalanced parentheses."))
+                  (error 'scheme-reader-error
+                         :details "Imbalanced parentheses"))
                  ((and after-dotted? (not dotted-end?))
-                  (error "Invalid dotted list syntax. An expression needs an item after the dot."))
+                  (error 'scheme-reader-error
+                         :details "An expression needs an item after the dot in a dotted list"))
                  (t nil))))
-    (loop :with skip-next := 0
+    (loop :with skip-next :of-type a:non-negative-fixnum := 0
           :for old := nil :then (if (and match
                                          (not (eql match :dot)))
                                     match
@@ -286,14 +328,16 @@
                            (decf skip-next)
                            :skip)
                           (t match*)))
-          :for prior-quote-level := 0 :then quote-level
-          :for quote-level := (cond ((eql match :skip)
-                                     (or quote-level 0))
-                                    ((eql match :inc-quoted)
-                                     (progn
-                                       (setf match :skip)
-                                       (1+ (or quote-level 0))))
-                                    (t 0))
+          :for prior-quote-level :of-type a:non-negative-fixnum
+            := 0 :then quote-level
+          :for quote-level :of-type a:non-negative-fixnum
+            := (cond ((eql match :skip)
+                      (or quote-level 0))
+                     ((eql match :inc-quoted)
+                      (progn
+                        (setf match :skip)
+                        (1+ (or quote-level 0))))
+                     (t 0))
           :for after-dotted? := nil :then (or dotted? after-dotted?)
           :for dotted? := (dotted? match
                                    s-expression
