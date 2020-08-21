@@ -22,8 +22,6 @@
                (format stream " ~A" (details condition)))))
   (:documentation "An error in the Scheme reader where an unexpected EOF was read"))
 
-;;; TODO: case insensitivity, where valid
-;;;
 ;;; TODO: Invalid identifier starts need to be invalid.
 
 ;;; Reads an integer of the given radix
@@ -130,25 +128,25 @@
   (read-case (stream x)
     (#\|
      (read-block-comment stream))
-    (#\t
+    ((:or #\t #\T)
      (if (or (%delimiter? stream)
              (and (loop :for c* :across "rue"
                         :for c := (read-char stream nil nil)
-                        :always (and c (eql c c*)))
+                        :always (and c (char-equal c c*)))
                   (%delimiter? stream)))
          t
          (error 'scheme-reader-error
                 :details "Invalid character(s) after #t")))
-    (#\f
+    ((:or #\f #\F)
      (if (or (%delimiter? stream)
              (and (loop :for c* :across "alse"
                         :for c := (read-char stream nil nil)
-                        :always (and c (eql c c*)))
+                        :always (and c (char-equal c c*)))
                   (%delimiter? stream)))
          %scheme-boolean:f
          (error 'scheme-reader-error
                 :details "Invalid character(s) after #f")))
-    (#\u
+    ((:or #\u #\U)
      (read-case (stream c)
        (#\8 (loop :for c := (read-case (stream c)
                               ((:or #\Space #\Tab #\Newline) nil)
