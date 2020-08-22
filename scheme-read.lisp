@@ -163,15 +163,14 @@
                          ;; give a more useful error message...
                          ;; perhaps as a special read path that only
                          ;; reads numbers.
-                         (make-array (length s-expression) :initial-contents s-expression
-                                                           :element-type 'octet)))))
+                         (coerce s-expression 'bytevector?)))))
        (:eof (error 'scheme-reader-eof-error
                     :details "after #u when an 8 was expected"))
        (t (error 'scheme-reader-error
                  :details (format nil "#u8 expected, but #u~A was read." c)))))
     (#\(
      (let ((s-expression (scheme-read stream t)))
-       (make-array (length s-expression) :initial-contents s-expression)))
+       (coerce s-expression 'vector?)))
     (#\;
      :skip-next)
     (:eof
