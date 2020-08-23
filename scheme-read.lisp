@@ -22,6 +22,20 @@
                (format stream " ~A" (details condition)))))
   (:documentation "An error in the Scheme reader where an unexpected EOF was read"))
 
+(define-condition scheme-type-error (type-error)
+  ((%details
+    :initarg :details
+    :reader details
+    :initform nil))
+  (:report (lambda (condition stream)
+             (format stream "Type error")
+             (when (details condition)
+               (format stream " ~A" (details condition)))
+             (format stream "; expected type: ~A datum: ~A"
+                     (type-error-expected-type condition)
+                     (type-error-datum condition))))
+  (:documentation "A type error internal to the Scheme runtime."))
+
 ;;; TODO: Invalid identifier starts need to be invalid.
 
 ;;; Reads an integer of the given radix
@@ -158,19 +172,18 @@
                   :until c
                   :finally
                      (return
-                       (let ((s-expression (scheme-read stream t)))
-                         ;; TODO: type checking before this point will
-                         ;; give a more useful error message...
-                         ;; perhaps as a special read path that only
-                         ;; reads numbers.
-                         (coerce s-expression 'bytevector?)))))
+                       (handler-case (coerce (scheme-read stream t) 'bytevector?)
+                         (type-error (c)
+                           (error 'scheme-type-error
+                                  :details "in reading a bytevector"
+                                  :datum (type-error-datum c)
+                                  :expected-type 'octet))))))
        (:eof (error 'scheme-reader-eof-error
                     :details "after #u when an 8 was expected"))
        (t (error 'scheme-reader-error
                  :details (format nil "#u8 expected, but #u~A was read." c)))))
     (#\(
-     (let ((s-expression (scheme-read stream t)))
-       (coerce s-expression 'vector?)))
+     (coerce (scheme-read stream t) 'vector?))
     (#\;
      :skip-next)
     (:eof
