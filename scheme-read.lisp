@@ -40,8 +40,6 @@
   (member (peek-char nil stream nil :eof)
           '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
 
-;;; TODO: Invalid identifier starts need to be invalid.
-
 ;;; Reads an integer of the given radix
 (defun read-scheme-integer (stream &optional (radix 10))
   (check-type radix (integer 2 16))
@@ -61,7 +59,12 @@
 
 ;;; TODO: complex, infnan, exponent marker, and s/f/d/l alternate
 ;;; exponent markers.
-(defun read-scheme-number (stream radix)
+;;;
+;;; Reads a Scheme number in the given radix. If end? then it must be
+;;; the end of the stream after reading the number.
+(defun read-scheme-number (stream radix &optional end?)
+  ;; TODO: if end? then error if the stream is not EOF at the end
+  (declare (ignore end?))
   (let ((negate? (case (peek-char nil stream nil :eof)
                    (:eof (error 'scheme-reader-eof-error
                                 :details "when a number was expected"))
@@ -335,6 +338,15 @@
             (error 'scheme-reader-eof-error
                    :details "inside of a dotted list"))
            (t :dot)))
+    ((:or :nd :mc :me)
+     ;; Note: Many Schemes disregard this rule, but this is mandated
+     ;; by section 7.1.1 of r7rs.pdf.
+     (error 'scheme-reader-error
+            :details #.(concatenate 'string
+                                    "An identifier cannot start with a Unicode character "
+                                    "in the general categories of Nd, Mc, or Me. To portably "
+                                    "do this, first wrap the identifier in vertical lines "
+                                    "like |foo|.")))
     (t
      (unread-char match stream)
      (read-scheme-symbol stream))))

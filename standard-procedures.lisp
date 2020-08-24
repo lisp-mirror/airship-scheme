@@ -260,9 +260,9 @@
   (with-output-to-string (out)
     (write-scheme-number z out radix)))
 
-;;; TODO: requires the scheme reader
-;;;
-;;; (string->number string &optional (radix 10))
+(define-scheme-procedure (string->number string &optional (radix 10))
+  (with-input-from-string (in string)
+    (read-scheme-number in radix t)))
 
 ;;;; 6.3 - Booleans
 
