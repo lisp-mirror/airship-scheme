@@ -1,5 +1,23 @@
 ;;;; -*- mode: common-lisp; -*-
 
+;;; TODO: directives (read in `read-special'; replaces all
+;;; %invert-case with fold-case, which has to be done as a string, by
+;;; Unicode's rules!)
+;;;
+;;; TODO: in `read-special', handle labels (for literal circular/etc.
+;;; data structures)
+;;;
+;;; TODO: any missing escapes in `%read-string' and elsehwere, where
+;;; also relevant
+;;;
+;;; TODO: (probably) in `read-scheme-number', read complex, infnan,
+;;; the exponent marker e, and the extended s/f/d/l alternate exponent
+;;; markers.
+;;;
+;;; TODO: the quasiquote syntax (` , ,@)
+;;;
+;;; TODO: finish reading characters
+
 (cl:in-package #:airship-scheme)
 
 (define-condition scheme-reader-error (error)
@@ -57,9 +75,6 @@
         :do (setf number (+ match (* number radix)))
         :finally (return (values number length))))
 
-;;; TODO: complex, infnan, exponent marker, and s/f/d/l alternate
-;;; exponent markers.
-;;;
 ;;; Reads a Scheme number in the given radix. If end? then it must be
 ;;; the end of the stream after reading the number.
 (defun read-scheme-number (stream radix &optional end?)
@@ -72,6 +87,8 @@
                     (let ((char (read-char stream)))
                       (char= char #\-)))
                    (t nil)))
+        ;; TODO: actually, length could be useful for number because
+        ;; if 0 then it should fail
         (number (let ((number (read-scheme-integer stream radix)))
                   (if (%delimiter? stream)
                       number
@@ -130,9 +147,6 @@
 ;;; Reads a string starting after the initial " that enters the string
 ;;; reader. A string must end on a non-escaped ".
 ;;;
-;;; TODO: any missing escapes (i.e. hex char and multiline)
-;;;
-;;; TODO: The escapes are all shared with |foo| symbols aren't they?
 (defun %read-string (stream)
   (loop :for match := (read-case (stream x)
                         (:eof nil)
@@ -198,7 +212,19 @@
         (funcall exactness number)
         number)))
 
-;;; TODO: directives, characters, labels
+(defun %read-literal-character (stream)
+  (read-case (stream c)
+    ((:or #\x #\X)
+     (if (%delimiter? stream)
+         c
+         ;; TODO: note that hex escapes can also appear inside "" and perhaps ||
+         #| TODO: read to delimiter for hex escape |#))
+    (t
+     (if (%delimiter? stream)
+         c
+         ;; TODO: note that these can also appear inside "" and perhaps ||
+         #| TODO: read to delimiter and see if it's a (case-sensitive) character name |#))))
+
 (defun read-special (stream)
   (read-case (stream x)
     (#\|
@@ -243,6 +269,8 @@
                     :details "after #u when an 8 was expected"))
        (t (error 'scheme-reader-error
                  :details (format nil "#u8 expected, but #u~A was read." c)))))
+    (#\\
+     (%read-literal-character stream))
     ((:or #\e #\E)
      (let ((read-base (%find-read-base stream)))
        (exact (read-scheme-number stream read-base))))
@@ -276,9 +304,8 @@
                        (:eof
                         (error 'scheme-reader-eof-error
                                :details "inside of a |"))
-                       ;; TODO: handle other necessary escapes
                        (t (if after-escape?
-                              (%invert-case c)
+                              (%invert-case (%one-char-escape c))
                               (%invert-case c))))
         :for escape? := (eql char :escape)
         :with buffer := (make-array 16
@@ -351,7 +378,6 @@
      (unread-char match stream)
      (read-scheme-symbol stream))))
 
-;;; TODO: ` , ,@
 (defun scheme-read (stream &optional recursive?)
   (flet ((dotted? (match s-expression quoted? before-dotted?)
            (and (eql match :dot)
