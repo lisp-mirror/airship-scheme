@@ -36,19 +36,19 @@
                      (type-error-datum condition))))
   (:documentation "A type error internal to the Scheme runtime."))
 
+(define-function (%delimiter? :inline t) (stream)
+  (member (peek-char nil stream nil :eof)
+          '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
+
 ;;; TODO: Invalid identifier starts need to be invalid.
 
 ;;; Reads an integer of the given radix
-;;;
-;;; TODO: Call from read-scheme-number to handle all of the special
-;;; syntax of Scheme numbers. Determine if it is a syntax error there.
-;;; The entry point might be # or - or + or a digit and potentially
-;;; other things.
 (defun read-scheme-integer (stream &optional (radix 10))
   (check-type radix (integer 2 16))
   (loop :for match := (read-case (stream x)
                         ((:or (:range #\0 #\9)
-                              (:range #\a #\f))
+                              (:range #\a #\f)
+                              (:range #\A #\F))
                          (or (digit-char-p x radix)
                              (progn (unread-char x stream) nil)))
                         (:eof nil)
@@ -58,6 +58,32 @@
         :while match
         :do (setf number (+ match (* number radix)))
         :finally (return (values number length))))
+
+;;; TODO: complex, infnan, exponent marker, and s/f/d/l alternate
+;;; exponent markers.
+(defun read-scheme-number (stream radix)
+  (let ((negate? (case (peek-char nil stream nil :eof)
+                   (:eof (error 'scheme-reader-eof-error
+                                :details "when a number was expected"))
+                   ((#\+ #\-)
+                    (let ((char (read-char stream)))
+                      (char= char #\-)))
+                   (t nil)))
+        (number (let ((number (read-scheme-integer stream radix)))
+                  (if (%delimiter? stream)
+                      number
+                      ;; TODO: Peek the stuff at the end after the number. These
+                      ;; have to be delimiters, too.
+                      (read-case (stream match)
+                        (#\/
+                         (/ number (read-scheme-integer stream radix)))
+                        (#\.
+                         (unless (= 10 radix)
+                           (error 'scheme-reader-error
+                                  :details "A literal flonum must be in base 10."))
+                         (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                           (+ number (/ number* (expt 10d0 length*))))))))))
+    (if negate? (- number) number)))
 
 (defun read-line-comment (stream)
   (loop :for match := (read-case (stream c)
@@ -127,17 +153,49 @@
                              (error 'scheme-reader-eof-error
                                     :details "inside of a string")))))
 
-(define-function (%delimiter? :inline t) (stream)
-  (member (peek-char nil stream nil :eof)
-          '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
+(defun %find-read-base (stream)
+  (let ((next-char (peek-char nil stream nil :eof)))
+    (case next-char
+      (#\#
+       (read-char stream nil nil t)
+       (read-case (stream match)
+         ((:or #\b #\B) 2)
+         ((:or #\o #\O) 8)
+         ((:or #\d #\D) 10)
+         ((:or #\x #\X) 16)
+         (:eof (error 'scheme-reader-eof-error
+                      :details "after # when a radix was expected"))
+         (t (error 'scheme-reader-error
+                   :details (format nil "#~A is not a radix" match)))))
+      (:eof
+       (error 'scheme-reader-eof-error
+              :details "when a number was expected"))
+      (t
+       10))))
+
+(defun %read-in-base (stream base)
+  (let* ((next-char (peek-char nil stream nil :eof))
+         (exactness (case next-char
+                      (#\#
+                       (read-char stream nil nil t)
+                       (read-case (stream match)
+                         ((:or #\e #\E) #'exact)
+                         ((:or #\i #\I) #'inexact)
+                         (:eof (error 'scheme-reader-eof-error
+                                      :details "after # when either E or I was expected"))
+                         (t (error 'scheme-reader-error
+                                   :details (format nil "#~A is not an exactness/inexactness" match)))))
+                      (:eof
+                       (error 'scheme-reader-eof-error
+                              :details "when a number was expected"))
+                      (t
+                       nil)))
+         (number (read-scheme-number stream base)))
+    (if exactness
+        (funcall exactness number)
+        number)))
 
 ;;; TODO: directives, characters, labels
-;;;
-;;; TODO: If #e then read the next token and force (exact ...) on the
-;;; result. Do the same for #i but with (inexact ...). This might come
-;;; before or might come after the radix prefix. The radix prefix s
-;;; much simpler, especially since those must be exact, although
-;;; e.g. #i#x42 is valid.
 (defun read-special (stream)
   (read-case (stream x)
     (#\|
@@ -182,6 +240,20 @@
                     :details "after #u when an 8 was expected"))
        (t (error 'scheme-reader-error
                  :details (format nil "#u8 expected, but #u~A was read." c)))))
+    ((:or #\e #\E)
+     (let ((read-base (%find-read-base stream)))
+       (exact (read-scheme-number stream read-base))))
+    ((:or #\i #\I)
+     (let ((read-base (%find-read-base stream)))
+       (inexact (read-scheme-number stream read-base))))
+    ((:or #\b #\B)
+     (%read-in-base stream 2))
+    ((:or #\o #\O)
+     (%read-in-base stream 8))
+    ((:or #\d #\D)
+     (%read-in-base stream 10))
+    ((:or #\x #\X)
+     (%read-in-base stream 16))
     (#\(
      (coerce (scheme-read stream t) 'vector?))
     (#\;
@@ -246,9 +318,9 @@
     (#\( (scheme-read stream t))
     (#\) #\))
     (#\" (%read-string stream))
-    ((:range #\0 #\9)
+    ((:or (:range #\0 #\9) #\- #\+)
      (unread-char match stream)
-     (read-scheme-integer stream))
+     (read-scheme-number stream 10))
     ((:or #\Newline #\Space #\Tab) :skip)
     (#\# (read-special stream))
     (#\' :inc-quoted)
@@ -268,10 +340,6 @@
      (read-scheme-symbol stream))))
 
 ;;; TODO: ` , ,@
-;;;
-;;; TODO: non-integer numbers
-;;;
-;;; TODO: Reread R7RS.pdf and chapter 7
 (defun scheme-read (stream &optional recursive?)
   (flet ((dotted? (match s-expression quoted? before-dotted?)
            (and (eql match :dot)
