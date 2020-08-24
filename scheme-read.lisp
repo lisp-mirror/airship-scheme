@@ -237,13 +237,9 @@
                                  package))))
 
 (defun quote-item (item n)
-  (if (eql item :eof)
-      ;; todo: fixme: this path is never taken
-      (error 'scheme-reader-eof-error
-             :details "after a quote")
-      (loop :repeat n
-            :for quoted := `',item :then `',quoted
-            :finally (return quoted))))
+  (loop :repeat n
+        :for quoted := `',item :then `',quoted
+        :finally (return quoted)))
 
 (defun read-scheme-character (stream)
   (read-case (stream match)
@@ -303,7 +299,7 @@
                   (error 'scheme-reader-error
                          :details "More than one dot inside of a dotted list"))
                  (t nil)))
-         (check-end (skip-next old match after-dotted? dotted-end?)
+         (check-end (skip-next old match after-dotted? dotted-end? quote-level)
            (cond ((plusp skip-next)
                   (error 'scheme-reader-error
                          :details "Expected to skip a token to match a #;-style comment, but none found."))
@@ -314,6 +310,9 @@
                  ((and after-dotted? (not dotted-end?))
                   (error 'scheme-reader-error
                          :details "An expression needs an item after the dot in a dotted list"))
+                 ((plusp quote-level)
+                  (error 'scheme-reader-eof-error
+                         :details "after a quote"))
                  (t nil))))
     (loop :with skip-next :of-type a:non-negative-fixnum := 0
           :for old := nil :then (if (and match
@@ -347,6 +346,8 @@
                       (progn
                         (setf match :skip)
                         (1+ (or quote-level 0))))
+                     ((eql match :eof)
+                      quote-level)
                      (t 0))
           :for after-dotted? := nil :then (or dotted? after-dotted?)
           :for dotted? := (dotted? match
@@ -376,7 +377,7 @@
              ;; when building proper lists?
              (return
                (progn
-                 (check-end skip-next old match after-dotted? dotted-end?)
+                 (check-end skip-next old match after-dotted? dotted-end? quote-level)
                  (if dotted-end?
                      (progn
                        (setf (cdr (last s-expression)) dotted-end)
