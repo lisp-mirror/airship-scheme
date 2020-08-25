@@ -247,15 +247,34 @@
          %scheme-boolean:f
          (error 'scheme-reader-error
                 :details "Invalid character(s) after #f")))
+    ;; This section is complicated because arbitrary whitespace might
+    ;; be between #u8 and its parentheses, especially because of the
+    ;; default behavior in paredit for Emacs.
+    ;;
+    ;; i.e. Paredit produces #u8 () when only #u8() conforms to a
+    ;; strict reading of section 7.1.1 of R7RS-small.
+    ;;
+    ;; If you get this style warning because of paredit, then add the
+    ;; following to your .emacs file:
+    ;;
+    ;;   (setq paredit-space-for-delimiter-predicates '((lambda (endp delimiter) nil)))
     ((:or #\u #\U)
      (read-case (stream c)
-       (#\8 (loop :for c := (read-case (stream c)
-                              ((:or #\Space #\Tab #\Newline) nil)
+       (#\8 (loop :with whitespace? := nil
+                  :for c := (read-case (stream c)
+                              ((:or #\Space #\Tab #\Newline)
+                               (unless whitespace?
+                                 (warn #.(concatenate 'string
+                                                      "Style warning: In a strict interpretation "
+                                                      "of the standard, whitespace between #u8 and "
+                                                      "its parentheses would not be permitted.")))
+                               (setf whitespace? t)
+                               nil)
                               (#\( t)
                               (:eof (error 'scheme-reader-eof-error
                                            :details "when a \"(\" was expected"))
                               (t (error 'scheme-reader-error
-                                        :details "\"(\" expected, but ~A was read." c)))
+                                        :details (format nil "\"(\" expected, but ~A was read." c))))
                   :until c
                   :finally
                      (return
