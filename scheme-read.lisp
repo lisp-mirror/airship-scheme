@@ -54,6 +54,9 @@
                      (type-error-datum condition))))
   (:documentation "A type error internal to the Scheme runtime."))
 
+(defmacro eof-error (details)
+  `(error 'scheme-reader-eof-error :details ,details))
+
 (define-function (%delimiter? :inline t) (stream)
   (member (peek-char nil stream nil :eof)
           '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
@@ -81,8 +84,7 @@
   ;; TODO: if end? then error if the stream is not EOF at the end
   (declare (ignore end?))
   (let ((negate? (case (peek-char nil stream nil :eof)
-                   (:eof (error 'scheme-reader-eof-error
-                                :details "when a number was expected"))
+                   (:eof (eof-error "when a number was expected"))
                    ((#\+ #\-)
                     (let ((char (read-char stream)))
                       (char= char #\-)))
@@ -129,8 +131,7 @@
           :do (read-block-comment stream)
         :finally (if match
                      (return :skip)
-                     (error 'scheme-reader-eof-error
-                            :details "inside of a block comment"))))
+                     (eof-error "inside of a block comment"))))
 
 (define-function (%one-char-escape :inline t) (char)
   (case char
@@ -167,8 +168,7 @@
                   (vector-push-extend match buffer))
         :finally (return (if match
                              (subseq buffer 0 (fill-pointer buffer))
-                             (error 'scheme-reader-eof-error
-                                    :details "inside of a string")))))
+                             (eof-error "inside of a string")))))
 
 (defun %find-read-base (stream)
   (let ((next-char (peek-char nil stream nil :eof)))
@@ -180,15 +180,11 @@
          ((:or #\o #\O) 8)
          ((:or #\d #\D) 10)
          ((:or #\x #\X) 16)
-         (:eof (error 'scheme-reader-eof-error
-                      :details "after # when a radix was expected"))
+         (:eof (eof-error "after # when a radix was expected"))
          (t (error 'scheme-reader-error
                    :details (format nil "#~A is not a radix" match)))))
-      (:eof
-       (error 'scheme-reader-eof-error
-              :details "when a number was expected"))
-      (t
-       10))))
+      (:eof (eof-error "when a number was expected"))
+      (t 10))))
 
 (defun %read-in-base (stream base)
   (let* ((next-char (peek-char nil stream nil :eof))
@@ -198,13 +194,11 @@
                        (read-case (stream match)
                          ((:or #\e #\E) #'exact)
                          ((:or #\i #\I) #'inexact)
-                         (:eof (error 'scheme-reader-eof-error
-                                      :details "after # when either E or I was expected"))
+                         (:eof (eof-error "after # when either E or I was expected"))
                          (t (error 'scheme-reader-error
                                    :details (format nil "#~A is not an exactness/inexactness" match)))))
                       (:eof
-                       (error 'scheme-reader-eof-error
-                              :details "when a number was expected"))
+                       (eof-error "when a number was expected"))
                       (t
                        nil)))
          (number (read-scheme-number stream base)))
@@ -271,8 +265,7 @@
                                (setf whitespace? t)
                                nil)
                               (#\( t)
-                              (:eof (error 'scheme-reader-eof-error
-                                           :details "when a \"(\" was expected"))
+                              (:eof (eof-error "when a \"(\" was expected"))
                               (t (error 'scheme-reader-error
                                         :details (format nil "\"(\" expected, but ~A was read." c))))
                   :until c
@@ -284,8 +277,7 @@
                                   :details "in reading a bytevector"
                                   :datum (type-error-datum c)
                                   :expected-type 'octet))))))
-       (:eof (error 'scheme-reader-eof-error
-                    :details "after #u when an 8 was expected"))
+       (:eof (eof-error "after #u when an 8 was expected"))
        (t (error 'scheme-reader-error
                  :details (format nil "#u8 expected, but #u~A was read." c)))))
     (#\\
@@ -309,8 +301,7 @@
     (#\;
      :skip-next)
     (:eof
-     (error 'scheme-reader-eof-error
-            :details "after a # when a character was expected"))
+     (eof-error "after a # when a character was expected"))
     (t
      (error 'scheme-reader-error
             :details (format nil "Reader syntax #~A is not supported!" x)))))
@@ -320,9 +311,7 @@
         :for char := (read-case (stream c)
                        (#\| (if after-escape? c nil))
                        (#\\ (if after-escape? c :escape))
-                       (:eof
-                        (error 'scheme-reader-eof-error
-                               :details "inside of a |"))
+                       (:eof (eof-error "inside of a |"))
                        (t (if after-escape?
                               (%invert-case (%one-char-escape c))
                               (%invert-case c))))
@@ -381,8 +370,7 @@
             (unread-char match stream)
             (read-scheme-symbol stream))
            (:eof
-            (error 'scheme-reader-eof-error
-                   :details "inside of a dotted list"))
+            (eof-error "inside of a dotted list"))
            (t :dot)))
     ((:or :nd :mc :me)
      ;; Note: Many Schemes disregard this rule, but this is mandated
@@ -436,8 +424,7 @@
                   (error 'scheme-reader-error
                          :details "An expression needs an item after the dot in a dotted list"))
                  ((plusp quote-level)
-                  (error 'scheme-reader-eof-error
-                         :details "after a quote"))
+                  (eof-error "after a quote"))
                  (t nil))))
     (loop :with skip-next :of-type a:non-negative-fixnum := 0
           :for old := nil :then (if (and match
