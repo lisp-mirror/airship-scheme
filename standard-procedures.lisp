@@ -260,7 +260,7 @@
   (with-output-to-string (out)
     (write-scheme-number z out radix)))
 
-(define-scheme-procedure (string->number string &optional (radix 10))
+(define-scheme-predicate (string->number string &optional (radix 10))
   (with-input-from-string (in string)
     (read-scheme-number in radix t)))
 

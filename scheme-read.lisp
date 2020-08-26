@@ -79,33 +79,61 @@
         :finally (return (values number length))))
 
 ;;; Reads a Scheme number in the given radix. If end? then it must be
-;;; the end of the stream after reading the number.
+;;; the end of the stream after reading the number or else nil (which
+;;; will turn into #f) is returned. This is used by string->number.
+;;; Because of this, it also disables any errors.
 (defun read-scheme-number (stream radix &optional end?)
-  ;; TODO: if end? then error if the stream is not EOF at the end
-  (declare (ignore end?))
   (let ((negate? (case (peek-char nil stream nil :eof)
-                   (:eof (eof-error "when a number was expected"))
+                   (:eof
+                    (if end?
+                        nil
+                        (eof-error "when a number was expected")))
                    ((#\+ #\-)
                     (let ((char (read-char stream)))
                       (char= char #\-)))
-                   (t nil)))
-        ;; TODO: actually, length could be useful for number because
-        ;; if 0 then it should fail
-        (number (let ((number (read-scheme-integer stream radix)))
-                  (if (%delimiter? stream)
-                      number
-                      ;; TODO: Peek the stuff at the end after the number. These
-                      ;; have to be delimiters, too.
-                      (read-case (stream match)
-                        (#\/
-                         (/ number (read-scheme-integer stream radix)))
-                        (#\.
-                         (unless (= 10 radix)
-                           (error 'scheme-reader-error
-                                  :details "A literal flonum must be in base 10."))
-                         (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                           (+ number (/ number* (expt 10d0 length*))))))))))
-    (if negate? (- number) number)))
+                   (t nil))))
+    (multiple-value-bind (number length) (read-scheme-integer stream radix)
+      (let ((number (cond ((%delimiter? stream)
+                           number)
+                          ((zerop length)
+                           (if end?
+                               nil
+                               (error 'scheme-reader-error
+                                      :details "No number could be read when a number was expected.")))
+                          (t
+                           (read-case (stream match)
+                             (#\/
+                              (/ number (read-scheme-integer stream radix)))
+                             (#\.
+                              (cond ((= 10 radix)
+                                     (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                                       (+ number (/ number* (expt 10d0 length*)))))
+                                    (end?
+                                     nil)
+                                    (t
+                                     (error 'scheme-reader-error
+                                            :details "A literal flonum must be in base 10."))))
+                             (t
+                              (unread-char match stream)
+                              nil)))))
+            (delimiter? (%delimiter? stream)))
+        (cond ((not delimiter?)
+               (error-unless end?
+                             'scheme-reader-error
+                             :details "Invalid numerical syntax.")
+               nil)
+              ((not number)
+               nil)
+              ;; In CL terminology, this contains "junk" after the
+              ;; number... or it's just an empty stream.
+              ((and end?
+                    (or (not (eql (car delimiter?) :eof))
+                        (zerop length)))
+               nil)
+              (negate?
+               (- number))
+              (t
+               number))))))
 
 (defun read-line-comment (stream)
   (loop :for match := (read-case (stream c)
