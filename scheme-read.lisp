@@ -239,13 +239,33 @@
     ((:or #\x #\X)
      (if (%delimiter? stream)
          c
-         ;; TODO: note that hex escapes can also appear inside "" and perhaps ||
-         #| TODO: read to delimiter for hex escape |#))
+         (multiple-value-bind (number length)
+             (read-scheme-integer stream 16)
+           (error-when (or (zerop length)
+                           (not (%delimiter? stream)))
+                       'scheme-reader-error
+                       :details "Invalid hexadecimal number.")
+           number)))
     (t
      (if (%delimiter? stream)
          c
-         ;; TODO: note that these can also appear inside "" and perhaps ||
-         #| TODO: read to delimiter and see if it's a (case-sensitive) character name |#))))
+         (progn
+           (unread-char c stream)
+           ;; Note: There might be non-interning ways to do this, but
+           ;; this way is extensible.
+           (case (read-scheme-symbol stream)
+             (alarm     (code-char #x0007))
+             (backspace (code-char #x0008))
+             (delete    (code-char #x007f))
+             (escape    (code-char #x001b))
+             (newline   (code-char #x000a))
+             (null      (code-char #x0000))
+             (return    (code-char #x000d))
+             (space     (code-char #x0020))
+             (tab       (code-char #x0009))
+             (t
+              (error 'scheme-reader-error
+                     :details "Currently, Airship Scheme only supports the required character names."))))))))
 
 (defun read-special (stream)
   (read-case (stream x)
