@@ -1,11 +1,20 @@
 Airship Scheme
 ==============
 
-A new r7rs Scheme implementation, designed to interoperate with a
-Common Lisp (CL) environment.
+A new r7rs Scheme implementation, designed to run within a Common Lisp
+environment.
 
-Yes, [an "airship scheme" is a type of
-scheme](https://en.wikipedia.org/wiki/Imperial_Airship_Scheme)!
+About the name
+--------------
+
+The name was inspired by [the "Imperial Airship Scheme" Wikipedia
+article](https://en.wikipedia.org/wiki/Imperial_Airship_Scheme), via
+[a comment someone else made on Hacker
+News](https://news.ycombinator.com/item?id=13868549) in early 2017.
+Prior to that, this project used the working title `cl-scheme`. The
+old name is more descriptive, but considerably less interesting. The
+`#scheme` channel on Freenode IRC loved the name, which was shortened
+to "Airship Scheme" for simplicity.
 
 Note
 ----

@@ -19,8 +19,8 @@ Changelog](https://keepachangelog.com/en/1.0.0/).
      including `%list?` for lists that aren't necessarily proper
      lists.
  - A custom reader for the [R7RS-small] version of Scheme.
- - The number portion of the Scheme writer, as `write-scheme-number`,
-   for `number->string`.
+ - A custom writer that displays s-expressions in Scheme syntax
+   instead of Common Lisp syntax.
  - An internal representation for Scheme that supports tail recursion
    and continuations.
  - Macros for writing parts of this Scheme from Common Lisp, as
@@ -30,7 +30,7 @@ Changelog](https://keepachangelog.com/en/1.0.0/).
    hello world.
  - A substantial number of standard procedures from [R7RS-small]:
    - Almost all of sections 6.1 through 6.9, only excluding
-     `rationalize` and `string->number`.
+     `rationalize`.
    - Section 6.13, i.e. ports (streams in CL).
  - Some Scheme libraries:
    - Library definitions for the `(scheme)` libraries described in
