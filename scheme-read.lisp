@@ -15,8 +15,6 @@
 ;;; markers.
 ;;;
 ;;; TODO: the quasiquote syntax (` , ,@)
-;;;
-;;; TODO: finish reading characters
 
 (cl:in-package #:airship-scheme)
 
@@ -319,7 +317,7 @@
                   :until c
                   :finally
                      (return
-                       (handler-case (coerce (scheme-read stream t) 'bytevector?)
+                       (handler-case (coerce (scheme-read stream :recursive? t) 'bytevector?)
                          (type-error (c)
                            (error 'scheme-type-error
                                   :details "in reading a bytevector"
@@ -345,7 +343,7 @@
     ((:or #\x #\X)
      (%read-in-base stream 16))
     (#\(
-     (coerce (scheme-read stream t) 'vector?))
+     (coerce (scheme-read stream :recursive? t) 'vector?))
     (#\;
      :skip-next)
     (:eof
@@ -394,14 +392,9 @@
         :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
                                  package))))
 
-(defun quote-item (item n)
-  (loop :repeat n
-        :for quoted := `',item :then `',quoted
-        :finally (return quoted)))
-
-(defun read-scheme-character (stream)
+(defun read-scheme-character* (stream)
   (read-case (stream match)
-    (#\( (scheme-read stream t))
+    (#\( (scheme-read stream :recursive? t))
     (#\) #\))
     (#\" (%read-string stream))
     ((:or (:range #\0 #\9) #\- #\+)
@@ -409,7 +402,7 @@
      (read-scheme-number stream 10))
     ((:or #\Newline #\Space #\Tab) :skip)
     (#\# (read-special stream))
-    (#\' :inc-quoted)
+    (#\' :quote)
     (#\; (read-line-comment stream))
     (#\| (read-escaped-scheme-symbol stream))
     (:eof :eof)
@@ -433,10 +426,22 @@
      (unread-char match stream)
      (read-scheme-symbol stream))))
 
-(defun scheme-read (stream &optional recursive?)
-  (flet ((dotted? (match s-expression quoted? before-dotted?)
+(defun read-scheme-character (stream)
+  (loop :for match := (let ((match* (read-scheme-character* stream)))
+                        (if (eql match* :skip-next)
+                            (progn
+                              (read-scheme-character stream)
+                              (read-scheme-character stream))
+                            match*))
+        :while (eql match :skip)
+        :finally (return match)))
+
+(defun scheme-read (stream &key recursive? quoted? limit)
+  (check-type limit (maybe a:non-negative-fixnum))
+  (flet ((dotted? (match s-expression before-dotted?)
            (and (eql match :dot)
                 before-dotted?
+                ;; TODO: fixme: None of these errors happen anymore
                 (cond ((not recursive?)
                        (error 'scheme-reader-error
                               :details "The dotted list syntax must be used inside of a list"))
@@ -452,6 +457,7 @@
            (or (and recursive?
                     (eql match #\)))
                (eql match :eof)))
+         ;; TODO: fixme: None of these errors happen anymore.
          (check-dot (dotted-end? match)
            (cond (dotted-end?
                   (error 'scheme-reader-error
@@ -460,71 +466,49 @@
                   (error 'scheme-reader-error
                          :details "More than one dot inside of a dotted list"))
                  (t nil)))
-         (check-end (skip-next old match after-dotted? dotted-end? quote-level)
-           (cond ((plusp skip-next)
+         (check-end (old match after-dotted? dotted-end?)
+           (cond (nil
+                  ;; TODO: fixme: This error doesn't happen anymore.
                   (error 'scheme-reader-error
                          :details "Expected to skip a token to match a #;-style comment, but none found."))
                  ((or (and recursive? (eql match :eof))
                       (and (not recursive?) (eql old #\))))
                   (error 'scheme-reader-error
                          :details "Imbalanced parentheses"))
+                 ;; TODO: fixme: This error doesn't happen anymore.
                  ((and after-dotted? (not dotted-end?))
                   (error 'scheme-reader-error
                          :details "An expression needs an item after the dot in a dotted list"))
-                 ((plusp quote-level)
-                  (eof-error "after a quote"))
                  (t nil))))
-    (loop :with skip-next :of-type a:non-negative-fixnum := 0
+    (loop :with limit* :of-type (maybe a:non-negative-fixnum) := limit
           :for old := nil :then (if (and match
                                          (not (eql match :dot)))
                                     match
                                     old)
-          :for match := (let ((match* (read-scheme-character stream)))
-                          (if (eql match* :skip-next)
-                              (progn
-                                (incf skip-next)
-                                :skip)
-                              match*))
-            :then (let ((match* (read-scheme-character stream)))
-                    (cond ((eql match* :skip-next)
-                           (incf skip-next)
-                           :skip)
-                          ((or (eql match* :eof)
-                               (eql match* #\)))
-                           match*)
-                          ((and (not (eql match* :skip))
-                                (plusp skip-next))
-                           (decf skip-next)
-                           :skip)
-                          (t match*)))
-          :for prior-quote-level :of-type a:non-negative-fixnum
-            := 0 :then quote-level
-          :for quote-level :of-type a:non-negative-fixnum
-            := (cond ((eql match :skip)
-                      (or quote-level 0))
-                     ((eql match :inc-quoted)
-                      (progn
-                        (setf match :skip)
-                        (1+ (or quote-level 0))))
-                     ((eql match :eof)
-                      quote-level)
-                     (t 0))
+          :for match := (read-scheme-character stream)
           :for after-dotted? := nil :then (or dotted? after-dotted?)
-          :for dotted? := (dotted? match
-                                   s-expression
-                                   (plusp prior-quote-level)
-                                   before-dotted?)
+          :for dotted? := (dotted? match s-expression before-dotted?)
           :for before-dotted? := (eql match :skip)
           :with dotted-end := nil
           :with dotted-end? := nil
-          :until (end-of-read? match)
+          :until (or (and limit* (zerop limit*))
+                     (end-of-read? match))
           :if (and (not (eql match :skip))
                    (not dotted?)
                    (not after-dotted?))
-            :collect (if (zerop prior-quote-level)
-                         match
-                         (quote-item match prior-quote-level))
-              :into s-expression
+            :do (when limit* (decf limit*))
+            :and
+              :collect (if (eql match :quote)
+                           (let ((quoted (scheme-read stream :limit 1 :quoted? t)))
+                             (when (endp quoted)
+                               (if recursive?
+                                   ;; TODO: fixme: The first error doesn't happen anymore.
+                                   (error 'scheme-reader-error
+                                          :details "Nothing quoted!")
+                                   (eof-error "after a quote")))
+                             `(quote ,@quoted))
+                           match)
+                :into s-expression
           :else
             :if (and (not (eql match :skip)) after-dotted?)
               :do (progn
@@ -535,9 +519,11 @@
              ;; Note: This isn't an efficient way to make a dotted
              ;; list, but is the efficient way worth the added cost
              ;; when building proper lists?
+             ;;
+             ;; TODO: fixme: The dotted list builder doesn't run anymore.
              (return
                (progn
-                 (check-end skip-next old match after-dotted? dotted-end? quote-level)
+                 (check-end old match after-dotted? dotted-end?)
                  (if dotted-end?
                      (progn
                        (setf (cdr (last s-expression)) dotted-end)
