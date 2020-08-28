@@ -436,16 +436,17 @@
         :while (eql match :skip)
         :finally (return match)))
 
+;;; TODO: fixme: #; . should be an error.
 (defun scheme-read (stream &key recursive? quoted? limit)
   (check-type limit (maybe a:non-negative-fixnum))
-  (flet ((dotted? (match s-expression before-dotted?)
+  (flet ((dotted? (match s-expression)
            (and (eql match :dot)
-                before-dotted?
-                ;; TODO: fixme: None of these errors happen anymore
+                t
                 (cond ((not recursive?)
                        (error 'scheme-reader-error
                               :details "The dotted list syntax must be used inside of a list"))
                       (quoted?
+                       ;; TODO: fixme: This error doesn't happen anymore
                        (error 'scheme-reader-error
                               :details "A \".\" cannot follow a \"'\""))
                       (s-expression
@@ -457,7 +458,6 @@
            (or (and recursive?
                     (eql match #\)))
                (eql match :eof)))
-         ;; TODO: fixme: None of these errors happen anymore.
          (check-dot (dotted-end? match)
            (cond (dotted-end?
                   (error 'scheme-reader-error
@@ -475,7 +475,6 @@
                       (and (not recursive?) (eql old #\))))
                   (error 'scheme-reader-error
                          :details "Imbalanced parentheses"))
-                 ;; TODO: fixme: This error doesn't happen anymore.
                  ((and after-dotted? (not dotted-end?))
                   (error 'scheme-reader-error
                          :details "An expression needs an item after the dot in a dotted list"))
@@ -487,8 +486,7 @@
                                     old)
           :for match := (read-scheme-character stream)
           :for after-dotted? := nil :then (or dotted? after-dotted?)
-          :for dotted? := (dotted? match s-expression before-dotted?)
-          :for before-dotted? := (eql match :skip)
+          :for dotted? := (dotted? match s-expression)
           :with dotted-end := nil
           :with dotted-end? := nil
           :until (or (and limit* (zerop limit*))
@@ -519,8 +517,6 @@
              ;; Note: This isn't an efficient way to make a dotted
              ;; list, but is the efficient way worth the added cost
              ;; when building proper lists?
-             ;;
-             ;; TODO: fixme: The dotted list builder doesn't run anymore.
              (return
                (progn
                  (check-end old match after-dotted? dotted-end?)
