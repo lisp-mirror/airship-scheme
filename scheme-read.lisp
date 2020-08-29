@@ -173,7 +173,6 @@
 
 ;;; Reads a string starting after the initial " that enters the string
 ;;; reader. A string must end on a non-escaped ".
-;;;
 (defun %read-string (stream)
   (loop :for match := (read-case (stream x)
                         (:eof nil)
@@ -441,14 +440,12 @@
   (check-type limit (maybe a:non-negative-fixnum))
   (flet ((dotted? (match s-expression)
            (and (eql match :dot)
-                t
-                (cond ((not recursive?)
+                (cond (quoted?
+                       (error 'scheme-reader-error
+                              :details "A dot cannot follow a quote"))
+                      ((not recursive?)
                        (error 'scheme-reader-error
                               :details "The dotted list syntax must be used inside of a list"))
-                      (quoted?
-                       ;; TODO: fixme: This error doesn't happen anymore
-                       (error 'scheme-reader-error
-                              :details "A \".\" cannot follow a \"'\""))
                       (s-expression
                        t)
                       (t
@@ -488,7 +485,6 @@
           :for after-dotted? := nil :then (or dotted? after-dotted?)
           :for dotted? := (dotted? match s-expression)
           :with dotted-end := nil
-          :with dotted-end? := nil
           :until (or (and limit* (zerop limit*))
                      (end-of-read? match))
           :if (and (not (eql match :skip))
@@ -510,18 +506,17 @@
           :else
             :if (and (not (eql match :skip)) after-dotted?)
               :do (progn
-                    (check-dot dotted-end? match)
-                    (setf dotted-end match
-                          dotted-end? t))
+                    (check-dot dotted-end match)
+                    (setf dotted-end (list match)))
           :finally
              ;; Note: This isn't an efficient way to make a dotted
              ;; list, but is the efficient way worth the added cost
              ;; when building proper lists?
              (return
                (progn
-                 (check-end old match after-dotted? dotted-end?)
-                 (if dotted-end?
+                 (check-end old match after-dotted? dotted-end)
+                 (if dotted-end
                      (progn
-                       (setf (cdr (last s-expression)) dotted-end)
+                       (setf (cdr (last s-expression)) (car dotted-end))
                        s-expression)
                      s-expression))))))
