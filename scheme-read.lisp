@@ -410,7 +410,7 @@
             (unread-char match stream)
             (read-scheme-symbol stream))
            (:eof
-            (eof-error "inside of a dotted list"))
+            (eof-error "after a dot"))
            (t :dot)))
     ((:or :nd :mc :me)
      ;; Note: Many Schemes disregard this rule, but this is mandated
@@ -429,13 +429,20 @@
   (loop :for match := (let ((match* (read-scheme-character* stream)))
                         (if (eql match* :skip-next)
                             (progn
-                              (read-scheme-character stream)
+                              (let ((skipped-read (read-scheme-character stream)))
+                                (print skipped-read)
+                                (case skipped-read
+                                  (:dot (error 'scheme-reader-error
+                                               :details "Attempted to comment out a dot."))
+                                  (#\) (error 'scheme-reader-error
+                                              :details "Expected to skip a token to match a #;-style comment, but none found."))
+                                  (:eof (error 'scheme-reader-eof-error
+                                               :details "after a #;-style comment"))))
                               (read-scheme-character stream))
                             match*))
         :while (eql match :skip)
         :finally (return match)))
 
-;;; TODO: fixme: #; . should be an error.
 (defun scheme-read (stream &key recursive? quoted? limit)
   (check-type limit (maybe a:non-negative-fixnum))
   (flet ((dotted? (match s-expression)
@@ -464,11 +471,7 @@
                          :details "More than one dot inside of a dotted list"))
                  (t nil)))
          (check-end (old match after-dotted? dotted-end?)
-           (cond (nil
-                  ;; TODO: fixme: This error doesn't happen anymore.
-                  (error 'scheme-reader-error
-                         :details "Expected to skip a token to match a #;-style comment, but none found."))
-                 ((or (and recursive? (eql match :eof))
+           (cond ((or (and recursive? (eql match :eof))
                       (and (not recursive?) (eql old #\))))
                   (error 'scheme-reader-error
                          :details "Imbalanced parentheses"))
@@ -481,7 +484,9 @@
                                          (not (eql match :dot)))
                                     match
                                     old)
-          :for match := (read-scheme-character stream)
+          :for match := (if (and limit (zerop limit*))
+                            :skip
+                            (read-scheme-character stream))
           :for after-dotted? := nil :then (or dotted? after-dotted?)
           :for dotted? := (dotted? match s-expression)
           :with dotted-end := nil
