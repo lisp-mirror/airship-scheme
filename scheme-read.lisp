@@ -430,7 +430,6 @@
                         (if (eql match* :skip-next)
                             (progn
                               (let ((skipped-read (read-scheme-character stream)))
-                                (print skipped-read)
                                 (case skipped-read
                                   (:dot (error 'scheme-reader-error
                                                :details "Attempted to comment out a dot."))
@@ -498,10 +497,9 @@
             :do (when limit* (decf limit*))
             :and
               :collect (if (eql match :quote)
-                           (let ((quoted (scheme-read stream :limit 1 :quoted? t)))
+                           (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t)))
                              (when (endp quoted)
                                (if recursive?
-                                   ;; TODO: fixme: The first error doesn't happen anymore.
                                    (error 'scheme-reader-error
                                           :details "Nothing quoted!")
                                    (eof-error "after a quote")))
