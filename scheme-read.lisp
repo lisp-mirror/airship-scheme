@@ -7,14 +7,12 @@
 ;;; TODO: in `read-special', handle labels (for literal circular/etc.
 ;;; data structures)
 ;;;
-;;; TODO: any missing escapes in `%read-string' and elsehwere, where
+;;; TODO: any missing escapes in `%read-string' and elsewhere, where
 ;;; also relevant
 ;;;
 ;;; TODO: (probably) in `read-scheme-number', read complex, infnan,
 ;;; the exponent marker e, and the extended s/f/d/l alternate exponent
 ;;; markers.
-;;;
-;;; TODO: the quasiquote syntax (` , ,@)
 
 (cl:in-package #:airship-scheme)
 
@@ -401,7 +399,7 @@
      (read-scheme-number stream 10))
     ((:or #\Newline #\Space #\Tab) :skip)
     (#\# (read-special stream))
-    (#\' :quote)
+    (#\' 'quote)
     (#\; (read-line-comment stream))
     (#\| (read-escaped-scheme-symbol stream))
     (:eof :eof)
@@ -496,7 +494,17 @@
                    (not after-dotted?))
             :do (when limit* (decf limit*))
             :and
-              :collect (if (eql match :quote)
+              ;; TODO: fixme: handle the ability to write (quote foo)
+              ;; instead of 'foo, which needs to error on lengths 0 or
+              ;; 2+ and needs to not cons up another list.
+              ;;
+              ;; TODO: generalize to support quasiquote, unquote, and
+              ;; unquote-splicing as identifiers and as characters
+              ;; using the same mechanism here.
+              ;;
+              ;; TODO: `foo becomes (quasiquote foo) and , becomes
+              ;; (unquote foo) and ,@ becomes (unquote-splicing foo)
+              :collect (if (eql match 'quote)
                            (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t)))
                              (when (endp quoted)
                                (if recursive?
