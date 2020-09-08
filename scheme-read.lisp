@@ -400,6 +400,12 @@
     ((:or #\Newline #\Space #\Tab) :skip)
     (#\# (read-special stream))
     (#\' 'quote)
+    (#\` 'quasiquote)
+    (#\, (if (eql #\@ (peek-char nil stream nil :eof))
+             (progn
+               (read-char stream)
+               'unquote-splicing)
+             'unquote))
     (#\; (read-line-comment stream))
     (#\| (read-escaped-scheme-symbol stream))
     (:eof :eof)
@@ -496,22 +502,16 @@
             :and
               ;; TODO: fixme: handle the ability to write (quote foo)
               ;; instead of 'foo, which needs to error on lengths 0 or
-              ;; 2+ and needs to not cons up another list.
-              ;;
-              ;; TODO: generalize to support quasiquote, unquote, and
-              ;; unquote-splicing as identifiers and as characters
-              ;; using the same mechanism here.
-              ;;
-              ;; TODO: `foo becomes (quasiquote foo) and , becomes
-              ;; (unquote foo) and ,@ becomes (unquote-splicing foo)
-              :collect (if (eql match 'quote)
+              ;; 2+ and needs to not cons up another list. This
+              ;; generalizes to all four quote/unquote symbols.
+              :collect (if (member match '(quote quasiquote unquote unquote-splicing))
                            (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t)))
                              (when (endp quoted)
                                (if recursive?
                                    (error 'scheme-reader-error
                                           :details "Nothing quoted!")
                                    (eof-error "after a quote")))
-                             `(quote ,@quoted))
+                             `(,match ,@quoted))
                            match)
                 :into s-expression
           :else
