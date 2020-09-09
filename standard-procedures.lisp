@@ -261,8 +261,7 @@
     (write-scheme-number z out radix)))
 
 (define-scheme-predicate (string->number string &optional (radix 10))
-  (with-input-from-string (in string)
-    (read-scheme-number in radix t)))
+  (string-to-number string radix))
 
 ;;;; 6.3 - Booleans
 

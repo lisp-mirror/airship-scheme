@@ -9,10 +9,6 @@
 ;;;
 ;;; TODO: any missing escapes in `%read-string' and elsewhere, where
 ;;; also relevant
-;;;
-;;; TODO: (probably) in `read-scheme-number', read complex, infnan,
-;;; the exponent marker e, and the extended s/f/d/l alternate exponent
-;;; markers.
 
 (cl:in-package #:airship-scheme)
 
@@ -75,61 +71,68 @@
         :finally (return (values number length))))
 
 ;;; Reads a Scheme number in the given radix. If end? then it must be
-;;; the end of the stream after reading the number or else nil (which
-;;; will turn into #f) is returned. This is used by string->number.
-;;; Because of this, it also disables any errors.
+;;; the end of the stream after reading the number.
+;;;
+;;; TODO: infnan (+/- inf/nan .0 eps/e0/s0/f0/d0/l0) on either or both
+;;; or neither sides of complex
+;;;
+;;; TODO: exponent markers e/s/f/d/l on either or both or neither
+;;; sides of complex
+;;;
+;;; TODO: complex ({NUMBER} +/-{NUMBER}i or +/-i)
 (defun read-scheme-number (stream radix &optional end?)
   (let ((negate? (case (peek-char nil stream nil :eof)
                    (:eof
-                    (if end?
-                        nil
-                        (eof-error "when a number was expected")))
+                    (eof-error "when a number was expected"))
                    ((#\+ #\-)
                     (let ((char (read-char stream)))
                       (char= char #\-)))
                    (t nil))))
     (multiple-value-bind (number length) (read-scheme-integer stream radix)
-      (let ((number (cond ((%delimiter? stream)
+      (let ((number (cond ((zerop length)
+                           (peek-char nil stream nil :eof)
+                           (error 'scheme-reader-error
+                                  :details "No number could be read when a number was expected."))
+                          ((%delimiter? stream)
                            number)
-                          ((zerop length)
-                           (if end?
-                               nil
-                               (error 'scheme-reader-error
-                                      :details "No number could be read when a number was expected.")))
                           (t
                            (read-case (stream match)
                              (#\/
                               (/ number (read-scheme-integer stream radix)))
                              (#\.
-                              (cond ((= 10 radix)
-                                     (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                                       (+ number (/ number* (expt 10d0 length*)))))
-                                    (end?
-                                     nil)
-                                    (t
-                                     (error 'scheme-reader-error
-                                            :details "A literal flonum must be in base 10."))))
+                              (if (= 10 radix)
+                                  (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                                    (+ number (/ number* (expt 10d0 length*))))
+                                  (error 'scheme-reader-error
+                                         :details "A literal flonum must be in base 10.")))
                              (t
                               (unread-char match stream)
                               nil)))))
             (delimiter? (%delimiter? stream)))
         (cond ((not delimiter?)
-               (error-unless end?
-                             'scheme-reader-error
-                             :details "Invalid numerical syntax.")
-               nil)
-              ((not number)
-               nil)
+               (error 'scheme-reader-error
+                      :details "Invalid numerical syntax."))
               ;; In CL terminology, this contains "junk" after the
               ;; number... or it's just an empty stream.
               ((and end?
                     (or (not (eql (car delimiter?) :eof))
                         (zerop length)))
-               nil)
+               (error 'scheme-reader-error
+                      :details "Expected an EOF after reading the number."))
               (negate?
                (- number))
               (t
                number))))))
+
+(defun string-to-number (string &optional (radix 10))
+  (with-input-from-string (in string)
+    (handler-case (let ((next-char (peek-char nil in nil :eof)))
+                    (if (eql next-char #\#)
+                        (progn
+                          (read-char in nil :eof)
+                          (%read-special in radix))
+                        (read-scheme-number in radix t)))
+      (scheme-reader-error nil))))
 
 (defun read-line-comment (stream)
   (loop :for match := (read-case (stream c)
@@ -193,7 +196,7 @@
                              (subseq buffer 0 (fill-pointer buffer))
                              (eof-error "inside of a string")))))
 
-(defun %find-read-base (stream)
+(defun %find-read-base (stream &optional (radix 10))
   (let ((next-char (peek-char nil stream nil :eof)))
     (case next-char
       (#\#
@@ -207,7 +210,7 @@
          (t (error 'scheme-reader-error
                    :details (format nil "#~A is not a radix" match)))))
       (:eof (eof-error "when a number was expected"))
-      (t 10))))
+      (t radix))))
 
 (defun %read-in-base (stream base)
   (let* ((next-char (peek-char nil stream nil :eof))
@@ -261,6 +264,27 @@
              (t
               (error 'scheme-reader-error
                      :details "Currently, Airship Scheme only supports the required character names."))))))))
+
+;;; This is for #-prefixed tokens that are a number or an error.
+(defun %read-special (stream &optional (radix 10))
+  (read-case (stream x)
+    ((:or #\e #\E)
+     (let ((read-base (%find-read-base stream radix)))
+       (exact (read-scheme-number stream read-base))))
+    ((:or #\i #\I)
+     (let ((read-base (%find-read-base stream radix)))
+       (inexact (read-scheme-number stream read-base))))
+    ((:or #\b #\B)
+     (%read-in-base stream 2))
+    ((:or #\o #\O)
+     (%read-in-base stream 8))
+    ((:or #\d #\D)
+     (%read-in-base stream 10))
+    ((:or #\x #\X)
+     (%read-in-base stream 16))
+    (t
+     (error 'scheme-reader-error
+            :details (format nil "Reader syntax #~A is not supported!" x)))))
 
 (defun read-special (stream)
   (read-case (stream x)
@@ -325,20 +349,6 @@
                  :details (format nil "#u8 expected, but #u~A was read." c)))))
     (#\\
      (%read-literal-character stream))
-    ((:or #\e #\E)
-     (let ((read-base (%find-read-base stream)))
-       (exact (read-scheme-number stream read-base))))
-    ((:or #\i #\I)
-     (let ((read-base (%find-read-base stream)))
-       (inexact (read-scheme-number stream read-base))))
-    ((:or #\b #\B)
-     (%read-in-base stream 2))
-    ((:or #\o #\O)
-     (%read-in-base stream 8))
-    ((:or #\d #\D)
-     (%read-in-base stream 10))
-    ((:or #\x #\X)
-     (%read-in-base stream 16))
     (#\(
      (coerce (scheme-read stream :recursive? t) 'vector?))
     (#\;
@@ -346,8 +356,8 @@
     (:eof
      (eof-error "after a # when a character was expected"))
     (t
-     (error 'scheme-reader-error
-            :details (format nil "Reader syntax #~A is not supported!" x)))))
+     (unread-char x stream)
+     (%read-special stream))))
 
 (defun read-escaped-scheme-symbol (stream &optional (package *package*))
   (loop :for after-escape? := nil :then escape?
