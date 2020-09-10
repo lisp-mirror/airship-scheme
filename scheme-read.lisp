@@ -80,7 +80,7 @@
 ;;; only "0" is valid, like "f0"
 ;;;
 ;;; TODO: complex ({NUMBER} +/-{NUMBER}i or +/-i)
-(defun read-scheme-number (stream radix &optional end?)
+(defun %read-scheme-number (stream radix &optional end?)
   (let ((negate? (case (peek-char nil stream nil :eof)
                    (:eof
                     (eof-error "when a number was expected"))
@@ -124,14 +124,17 @@
               (t
                number))))))
 
+(defun read-scheme-number (stream &optional (radix 10) end?)
+  (let ((next-char (peek-char nil stream nil :eof)))
+    (if (eql next-char #\#)
+        (progn
+          (read-char stream nil :eof)
+          (%read-special stream radix))
+        (%read-scheme-number stream radix end?))))
+
 (defun string-to-number (string &optional (radix 10))
   (with-input-from-string (in string)
-    (handler-case (let ((next-char (peek-char nil in nil :eof)))
-                    (if (eql next-char #\#)
-                        (progn
-                          (read-char in nil :eof)
-                          (%read-special in radix))
-                        (read-scheme-number in radix t)))
+    (handler-case (read-scheme-number in radix t)
       (scheme-reader-error nil))))
 
 (defun read-line-comment (stream)
@@ -227,7 +230,7 @@
                        (eof-error "when a number was expected"))
                       (t
                        nil)))
-         (number (read-scheme-number stream base)))
+         (number (%read-scheme-number stream base)))
     (if exactness
         (funcall exactness number)
         number)))
@@ -270,10 +273,10 @@
   (read-case (stream x)
     ((:or #\e #\E)
      (let ((read-base (%find-read-base stream radix)))
-       (exact (read-scheme-number stream read-base))))
+       (exact (%read-scheme-number stream read-base))))
     ((:or #\i #\I)
      (let ((read-base (%find-read-base stream radix)))
-       (inexact (read-scheme-number stream read-base))))
+       (inexact (%read-scheme-number stream read-base))))
     ((:or #\b #\B)
      (%read-in-base stream 2))
     ((:or #\o #\O)
@@ -406,7 +409,7 @@
     (#\" (%read-string stream))
     ((:or (:range #\0 #\9) #\- #\+)
      (unread-char match stream)
-     (read-scheme-number stream 10))
+     (%read-scheme-number stream 10))
     ((:or #\Newline #\Space #\Tab) :skip)
     (#\# (read-special stream))
     (#\' 'quote)
