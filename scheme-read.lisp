@@ -73,11 +73,11 @@
 ;;; Reads a Scheme number in the given radix. If end? then it must be
 ;;; the end of the stream after reading the number.
 ;;;
-;;; TODO: infnan (+/- inf/nan .0 eps/e0/s0/f0/d0/l0) on either or both
-;;; or neither sides of complex
+;;; TODO: [+-](inf.0)|(nan.0)
 ;;;
 ;;; TODO: exponent markers e/s/f/d/l on either or both or neither
-;;; sides of complex
+;;; sides of complex if after base-10 integer or infnan; if infnan,
+;;; only "0" is valid, like "f0"
 ;;;
 ;;; TODO: complex ({NUMBER} +/-{NUMBER}i or +/-i)
 (defun read-scheme-number (stream radix &optional end?)

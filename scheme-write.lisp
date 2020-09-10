@@ -10,6 +10,7 @@
        (if (> *print-base* 10)
            (format stream "~A" (string-downcase (format nil "~A" number)))
            (format stream "~A" number)))
+      ;; TODO: handle short/long float in Lisps that have them (s0, l0)
       (float (let ((*read-default-float-format* 'double-float))
                (cond ((infinitep number)
                       (format stream
