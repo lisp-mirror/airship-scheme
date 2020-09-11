@@ -81,16 +81,13 @@
 ;;;
 ;;; TODO: complex ({NUMBER} +/-{NUMBER}i or +/-i)
 (defun %read-scheme-number (stream radix &optional end?)
-  (let ((negate? (case (peek-char nil stream nil :eof)
-                   (:eof
-                    (eof-error "when a number was expected"))
-                   ((#\+ #\-)
-                    (let ((char (read-char stream)))
-                      (char= char #\-)))
-                   (t nil))))
+  (let* ((sign-prefix (case (peek-char nil stream nil :eof)
+                        (:eof (eof-error "when a number was expected"))
+                        ((#\+ #\-) (read-char stream))
+                        (t nil)))
+         (negate? (eql sign-prefix #\-)))
     (multiple-value-bind (number length) (read-scheme-integer stream radix)
       (let ((number (cond ((zerop length)
-                           (peek-char nil stream nil :eof)
                            (error 'scheme-reader-error
                                   :details "No number could be read when a number was expected."))
                           ((%delimiter? stream)
@@ -98,13 +95,17 @@
                           (t
                            (read-case (stream match)
                              (#\/
-                              (/ number (read-scheme-integer stream radix)))
+                              (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                                (error-when (zerop length*)
+                                            'scheme-reader-error
+                                            :details "A fraction needs a denominator after the / sign.")
+                                (/ number number*)))
                              (#\.
-                              (if (= 10 radix)
-                                  (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                                    (+ number (/ number* (expt 10d0 length*))))
-                                  (error 'scheme-reader-error
-                                         :details "A literal flonum must be in base 10.")))
+                              (error-unless (= 10 radix)
+                                            'scheme-reader-error
+                                            :details "A literal flonum must be in base 10.")
+                              (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                                (+ number (/ number* (expt 10d0 length*)))))
                              (t
                               (unread-char match stream)
                               nil)))))
@@ -112,11 +113,9 @@
         (cond ((not delimiter?)
                (error 'scheme-reader-error
                       :details "Invalid numerical syntax."))
-              ;; In CL terminology, this contains "junk" after the
-              ;; number... or it's just an empty stream.
-              ((and end?
-                    (or (not (eql (car delimiter?) :eof))
-                        (zerop length)))
+              ;; In CL terminology, this stream contains "junk" after
+              ;; the number.
+              ((and end? (not (eql (car delimiter?) :eof)))
                (error 'scheme-reader-error
                       :details "Expected an EOF after reading the number."))
               (negate?
