@@ -53,6 +53,12 @@
   (member (peek-char nil stream nil :eof)
           '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
 
+;;; If possible, this generates a NaN of the given type of float for
+;;; +nan.0 and -nan.0
+(defun nan (float-type)
+  (let ((zero (coerce 0 float-type)))
+    (f:with-float-traps-masked t (/ zero zero))))
+
 ;;; Reads an integer of the given radix
 (defun read-scheme-integer (stream &optional (radix 10))
   (check-type radix (integer 2 16))
@@ -73,55 +79,97 @@
 ;;; Reads a Scheme number in the given radix. If end? then it must be
 ;;; the end of the stream after reading the number.
 ;;;
-;;; TODO: [+-](inf.0)|(nan.0)
+;;; TODO: [+-](inf.0)|(nan.0) i.e. sign can imply inf or nan instead of a number.
 ;;;
-;;; TODO: exponent markers e/s/f/d/l on either or both or neither
-;;; sides of complex if after base-10 integer or infnan; if infnan,
-;;; only "0" is valid, like "f0"
+;;; TODO: if infnan, only "0" is valid as an exponent, like "f0"; this
+;;; is so infnan of non-doubles can be written
 ;;;
-;;; TODO: complex ({NUMBER} +/-{NUMBER}i or +/-i)
+;;; TODO: complex via ({NUMBER} +/- {NUMBER} i or +/- i)
+;;;
+;;; TODO: complex via {real} @ {real}
+;;;
+;;; TODO: complex can support any number on either side (including
+;;; infnan) except the #foo portion of the syntax, which is the
+;;; prefix and must come first, before the complex.
+;;;
+;;; TODO: Remember, all of these (i, inf, nan, etc.) are
+;;; case-insensitive!
 (defun %read-scheme-number (stream radix &optional end?)
-  (let* ((sign-prefix (case (peek-char nil stream nil :eof)
-                        (:eof (eof-error "when a number was expected"))
-                        ((#\+ #\-) (read-char stream))
-                        (t nil)))
-         (negate? (eql sign-prefix #\-)))
-    (multiple-value-bind (number length) (read-scheme-integer stream radix)
-      (let ((number (cond ((zerop length)
-                           (error 'scheme-reader-error
-                                  :details "No number could be read when a number was expected."))
-                          ((%delimiter? stream)
-                           number)
-                          (t
-                           (read-case (stream match)
-                             (#\/
-                              (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                                (error-when (zerop length*)
-                                            'scheme-reader-error
-                                            :details "A fraction needs a denominator after the / sign.")
-                                (/ number number*)))
-                             (#\.
-                              (error-unless (= 10 radix)
-                                            'scheme-reader-error
-                                            :details "A literal flonum must be in base 10.")
-                              (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                                (+ number (/ number* (expt 10d0 length*)))))
-                             (t
-                              (unread-char match stream)
-                              nil)))))
-            (delimiter? (%delimiter? stream)))
-        (cond ((not delimiter?)
-               (error 'scheme-reader-error
-                      :details "Invalid numerical syntax."))
-              ;; In CL terminology, this stream contains "junk" after
-              ;; the number.
-              ((and end? (not (eql (car delimiter?) :eof)))
-               (error 'scheme-reader-error
-                      :details "Expected an EOF after reading the number."))
-              (negate?
-               (- number))
-              (t
-               number))))))
+  (labels ((read-sign (stream)
+             (case (peek-char nil stream nil :eof)
+               (:eof (eof-error "when a number was expected"))
+               ((#\+ #\-) (read-char stream))
+               (t nil)))
+           (flonum-radix-error ()
+             (error-unless (= 10 radix)
+                           'scheme-reader-error
+                           :details "A literal flonum must be in base 10."))
+           (read-exponent (number stream float-type)
+             (flonum-radix-error)
+             (let ((negate? (eql #\- (read-sign stream))))
+               (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                 (error-when (zerop length*)
+                             'scheme-reader-error
+                             :details "An exponent was expected but none was provided")
+                 (* (coerce number float-type)
+                    (expt 10
+                          (* number*
+                             (if negate? -1 1))))))))
+    (let* ((sign-prefix (read-sign stream))
+           (negate? (eql #\- sign-prefix)))
+      ;; TODO: Have an alternate branch for infnan if sign-prefix is +
+      ;; or - followed by i or n. However, there is ambiguity and +i
+      ;; and -i can also be a complex number. The other complex
+      ;; numbers start in the main branch.
+      (multiple-value-bind (number length) (read-scheme-integer stream radix)
+        (let ((number (progn
+                        ;; A leading decimal point implicitly has a 0
+                        ;; in front. Otherwise, no number at the start
+                        ;; is an error.
+                        (let ((next-char (peek-char nil stream nil :eof)))
+                          (error-when (and (zerop length)
+                                           (not (eql #\. next-char)))
+                                      'scheme-reader-error
+                                      :details "No number could be read when a number was expected.")
+                          (when (and (zerop length) (eql #\. next-char))
+                            (setf (values number length) (values 0 1))))
+                        (cond ((%delimiter? stream)
+                               number)
+                              (t
+                               (read-case (stream match)
+                                 (#\/
+                                  (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                                    (error-when (zerop length*)
+                                                'scheme-reader-error
+                                                :details "A fraction needs a denominator after the / sign.")
+                                    (/ number number*)))
+                                 (#\.
+                                  (flonum-radix-error)
+                                  (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                                    (+ number (/ number* (expt 10d0 length*)))))
+                                 ((:or #\e #\E)
+                                  (read-exponent number stream 'double-float))
+                                 ((:or #\f #\F)
+                                  (read-exponent number stream 'single-float))
+                                 ((:or #\d #\D)
+                                  (read-exponent number stream 'double-float))
+                                 ((:or #\s #\S)
+                                  (read-exponent number stream 'short-float))
+                                 ((:or #\l #\L)
+                                  (read-exponent number stream 'long-float))
+                                 (t
+                                  (unread-char match stream)
+                                  0))))))
+              (delimiter? (%delimiter? stream)))
+          (error-unless delimiter?
+                        'scheme-reader-error
+                        :details "Invalid numerical syntax.")
+          ;; In CL terminology, this stream contains "junk" after the
+          ;; number.
+          (error-when (and end? (not (eql (car delimiter?) :eof)))
+                      'scheme-reader-error
+                      :details "Expected an EOF after reading the number.")
+          (* number (if negate? -1 1)))))))
 
 (defun read-scheme-number (stream &optional (radix 10) end?)
   (let ((next-char (peek-char nil stream nil :eof)))
