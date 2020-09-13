@@ -444,27 +444,35 @@
          %scheme-boolean:f
          (error 'scheme-reader-error
                 :details "Invalid character(s) after #f")))
-    ;; This section is complicated because arbitrary whitespace might
-    ;; be between #u8 and its parentheses, especially because of the
-    ;; default behavior in paredit for Emacs.
+    ;; Arbitrary whitespace between #u8 and its parentheses is not
+    ;; required to be supported.
+    ;;
+    ;; Producing this non-conforming syntax is the default behavior in
+    ;; paredit for Emacs.
     ;;
     ;; i.e. Paredit produces #u8 () when only #u8() conforms to a
     ;; strict reading of section 7.1.1 of R7RS-small.
     ;;
-    ;; If you get this style warning because of paredit, then add the
-    ;; following to your .emacs file:
+    ;; If you get this error because of paredit, then you can resolve
+    ;; this by adding the following to your .emacs file:
     ;;
     ;;   (setq paredit-space-for-delimiter-predicates '((lambda (endp delimiter) nil)))
+    ;;
+    ;; The error might be overridable in the future, so the
+    ;; whitespace-tracking is maintained even though the whitespace is
+    ;; currently an error.
     ((:or #\u #\U)
      (read-case (stream c)
        (#\8 (loop :with whitespace? := nil
                   :for c := (read-case (stream c)
                               ((:or #\Space #\Tab #\Newline)
                                (unless whitespace?
-                                 (warn #.(concatenate 'string
-                                                      "Style warning: In a strict interpretation "
-                                                      "of the standard, whitespace between #u8 and "
-                                                      "its parentheses would not be permitted.")))
+                                 (error 'scheme-reader-error
+                                        :details #.(concatenate
+                                                    'string
+                                                    "In a strict interpretation of the R7RS-small "
+                                                    "standard in section 7.1.1, whitespace between #u8 "
+                                                    "and its parentheses is not permitted.")))
                                (setf whitespace? t)
                                nil)
                               (#\( t)
