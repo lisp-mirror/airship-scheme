@@ -109,14 +109,22 @@
                              (if negate? -1 1))))))))
     (let* ((sign-prefix (read-sign stream))
            (negate? (eql #\- sign-prefix))
-           ;; Only peek the next char if there's a prefix.
-           (next-char (and sign-prefix (peek-char nil stream nil :eof))))
+           (next-char (peek-char nil stream nil :eof)))
       ;; The special cases, which can only happen if there's a sign
       ;; prefix, are inf.0, nan.0, or i. As an extension, the extended
       ;; exponentiation suffix is permitted (with 0 as the only
       ;; allowed exponent) as a way to get an infinity or NaN of a
       ;; different floating point type.
-      (cond ((or (eql next-char #\n)
+      ;;
+      ;; There are also cases that are not numbers, but symbols. Most
+      ;; trivially, these are + and -.
+      ;;
+      ;; TODO: fixme: failed candidates for inf and nan should be
+      ;; symbols because they begin with + or - like many ordinary
+      ;; symbols.
+      (cond ((%delimiter? stream)
+             sign-prefix)
+            ((or (eql next-char #\n)
                  (eql next-char #\N))
              (if (loop :for c* :across "nan.0"
                        :for c := (read-char stream nil nil)
@@ -210,7 +218,9 @@
                                             "The reader expected ~Ai or ~Ainf.0"
                                             sign-prefix
                                             sign-prefix)))))
-            (t
+            ((and next-char
+                  (or (digit-char-p next-char radix)
+                      (eql next-char #\.)))
              (multiple-value-bind (number length) (read-scheme-integer stream radix)
                ;; A leading decimal point implicitly has a 0 in front.
                ;; Otherwise, no number at the start is an error.
@@ -247,6 +257,11 @@
                                        (unread-char match stream)
                                        0)))))
                      (delimiter? (%delimiter? stream)))
+                 ;; Note: Instead of an error, this failed candidate
+                 ;; of a number could be read as a symbol, like in CL
+                 ;; and Racket. This is potentially still valid as a
+                 ;; symbol in R7RS-small if it began with a . instead
+                 ;; of a number, such as .1foo
                  (error-unless delimiter?
                                'scheme-reader-error
                                :details "Invalid numerical syntax.")
@@ -255,15 +270,27 @@
                  (error-when (and end? (not (eql (car delimiter?) :eof)))
                              'scheme-reader-error
                              :details "Expected an EOF after reading the number.")
-                 (* number (if negate? -1 1)))))))))
+                 (* number (if negate? -1 1)))))
+            ;; For symbols that begin with + or -, such as CL-style
+            ;; constant names, e.g. +foo+
+            (sign-prefix
+             (read-scheme-symbol stream :prefix (make-string 1 :initial-element sign-prefix)))
+            (t
+             (error 'scheme-reader-error
+                    :details (format nil
+                                     "Failure to read a number when reading ~A"
+                                     next-char)))))))
 
 (defun read-scheme-number (stream &optional (radix 10) end?)
-  (let ((next-char (peek-char nil stream nil :eof)))
-    (if (eql next-char #\#)
-        (progn
-          (read-char stream nil :eof)
-          (%read-special stream radix))
-        (%read-scheme-number stream radix end?))))
+  (let* ((next-char (peek-char nil stream nil :eof))
+         (possible-number (if (eql next-char #\#)
+                              (progn
+                                (read-char stream nil :eof)
+                                (%read-special stream radix))
+                              (%read-scheme-number stream radix end?))))
+    (if (numberp possible-number)
+        possible-number
+        nil)))
 
 (defun string-to-number (string &optional (radix 10))
   (with-input-from-string (in string)
@@ -523,7 +550,7 @@
         :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
                                  package))))
 
-(defun read-scheme-symbol (stream &optional (package *package*))
+(defun read-scheme-symbol (stream &key (package *package*) prefix)
   (loop :for char := (read-case (stream c)
                        (#\(
                         (warn "Style warning: There should be a space before a \"(\" if it is directly following a symbol.")
@@ -534,14 +561,35 @@
                         nil)
                        (:eof nil)
                        (t (%invert-case c)))
-        :with buffer := (make-array 16
-                                    :element-type 'character
-                                    :adjustable t
-                                    :fill-pointer 0)
+        :with buffer := (if (and prefix (typep prefix 'sequence))
+                            (make-array (length prefix)
+                                        :element-type 'character
+                                        :adjustable t
+                                        :fill-pointer (length prefix)
+                                        :initial-contents prefix)
+                            (make-array 16
+                                        :element-type 'character
+                                        :adjustable t
+                                        :fill-pointer 0))
         :while char
         :do (vector-push-extend char buffer)
         :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
                                  package))))
+
+;;; A dot can represent a possible number (if not, it's a symbol), a
+;;; part of a dotted list, or the start of a symbol.
+(defun read-scheme-dot (match stream)
+  (let ((next-char (peek-char nil stream nil nil)))
+    (cond ((and next-char (digit-char-p next-char))
+           (unread-char match stream)
+           (%read-scheme-number stream 10))
+          ((not next-char)
+           (eof-error "after a dot"))
+          ((%delimiter? stream)
+           :dot)
+          (t
+           (unread-char match stream)
+           (read-scheme-symbol stream)))))
 
 (defun read-scheme-character* (stream)
   (read-case (stream match)
@@ -563,13 +611,7 @@
     (#\; (read-line-comment stream))
     (#\| (read-escaped-scheme-symbol stream))
     (:eof :eof)
-    (#\. (case (peek-char nil stream nil :eof)
-           (#\.
-            (unread-char match stream)
-            (read-scheme-symbol stream))
-           (:eof
-            (eof-error "after a dot"))
-           (t :dot)))
+    (#\. (read-scheme-dot match stream))
     ((:or :nd :mc :me)
      ;; Note: Many Schemes disregard this rule, but this is mandated
      ;; by section 7.1.1 of r7rs.pdf.
@@ -593,8 +635,7 @@
                                                :details "Attempted to comment out a dot."))
                                   (#\) (error 'scheme-reader-error
                                               :details "Expected to skip a token to match a #;-style comment, but none found."))
-                                  (:eof (error 'scheme-reader-eof-error
-                                               :details "after a #;-style comment"))))
+                                  (:eof (eof-error "after a #;-style comment"))))
                               (read-scheme-character stream))
                             match*))
         :while (eql match :skip)
