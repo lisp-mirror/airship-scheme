@@ -601,13 +601,13 @@
      (%read-scheme-number stream 10))
     ((:or #\Newline #\Space #\Tab) :skip)
     (#\# (read-special stream))
-    (#\' 'quote)
-    (#\` 'quasiquote)
+    (#\' :quote)
+    (#\` :quasiquote)
     (#\, (if (eql #\@ (peek-char nil stream nil :eof))
              (progn
                (read-char stream)
-               'unquote-splicing)
-             'unquote))
+               :unquote-splicing)
+             :unquote))
     (#\; (read-line-comment stream))
     (#\| (read-escaped-scheme-symbol stream))
     (:eof :eof)
@@ -695,17 +695,19 @@
                    (not after-dotted?))
             :do (when limit* (decf limit*))
             :and
-              ;; TODO: fixme: handle the ability to write (quote foo)
-              ;; instead of 'foo; this also applies to the other quote
-              ;; symbols
-              :collect (if (member match '(quote quasiquote unquote unquote-splicing))
-                           (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t)))
+              :collect (if (member match '(:quote :quasiquote :unquote :unquote-splicing))
+                           (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t))
+                                 (match* (ecase match
+                                           (:quote 'quote)
+                                           (:quasiquote 'quasiquote)
+                                           (:unquote 'unquote)
+                                           (:unquote-splicing 'unquote-splicing))))
                              (when (endp quoted)
                                (if recursive?
                                    (error 'scheme-reader-error
                                           :details "Nothing quoted!")
                                    (eof-error "after a quote")))
-                             `(,match ,@quoted))
+                             `(,match* ,@quoted))
                            match)
                 :into s-expression
           :else
