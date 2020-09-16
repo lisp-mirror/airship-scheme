@@ -76,6 +76,11 @@
         :do (setf number (+ match (* number radix)))
         :finally (return (values number length))))
 
+(define-function (always :inline t) (string stream)
+  (loop :for c* :across string
+        :for c := (read-char stream nil nil)
+        :always (and c (char-equal c c*))))
+
 ;;; Reads a Scheme number in the given radix. If end? then it must be
 ;;; the end of the stream after reading the number.
 ;;;
@@ -126,9 +131,7 @@
              sign-prefix)
             ((or (eql next-char #\n)
                  (eql next-char #\N))
-             (if (loop :for c* :across "nan.0"
-                       :for c := (read-char stream nil nil)
-                       :always (and c (char-equal c c*)))
+             (if (always "nan.0" stream)
                  (if (%delimiter? stream)
                      (nan 'double-float)
                      (flet ((read-zero-character? (exponent-char stream)
@@ -169,9 +172,7 @@
              (cond ((%delimiter? stream)
                     (* #C(0 1)
                        (if negate? -1 1)))
-                   ((loop :for c* :across "nf.0"
-                          :for c := (read-char stream nil nil)
-                          :always (and c (char-equal c c*)))
+                   ((always "nf.0" stream)
                     (if (%delimiter? stream)
                         (if negate?
                             f:double-float-negative-infinity
@@ -455,18 +456,14 @@
      (read-block-comment stream))
     ((:or #\t #\T)
      (if (or (%delimiter? stream)
-             (and (loop :for c* :across "rue"
-                        :for c := (read-char stream nil nil)
-                        :always (and c (char-equal c c*)))
+             (and (always "rue" stream)
                   (%delimiter? stream)))
          t
          (error 'scheme-reader-error
                 :details "Invalid character(s) after #t")))
     ((:or #\f #\F)
      (if (or (%delimiter? stream)
-             (and (loop :for c* :across "alse"
-                        :for c := (read-char stream nil nil)
-                        :always (and c (char-equal c c*)))
+             (and (always "alse" stream)
                   (%delimiter? stream)))
          %scheme-boolean:f
          (error 'scheme-reader-error
