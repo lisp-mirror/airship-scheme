@@ -81,6 +81,169 @@
         :for c := (read-char stream nil nil)
         :always (and c (char-equal c c*))))
 
+(defun %read-nan (sign-prefix stream)
+  (if (always "nan.0" stream)
+      (if (%delimiter? stream)
+          (nan 'double-float)
+          (flet ((read-zero-character? (exponent-char stream)
+                   (read-case (stream char)
+                     (#\0 (if (%delimiter? stream)
+                              t
+                              (error 'scheme-reader-error
+                                     :details "Invalid way to write a NaN literal.")))
+                     (t
+                      (error 'scheme-reader-error
+                             :details (format nil
+                                              "Invalid character; ~Anan.0~A0 expected"
+                                              sign-prefix
+                                              exponent-char))))))
+            (read-case (stream exponent-char)
+              ((:or #\e #\E #\d #\D)
+               (when (read-zero-character? exponent-char stream)
+                 (nan 'double-float)))
+              ((:or #\f #\F)
+               (when (read-zero-character? exponent-char stream)
+                 (nan 'single-float)))
+              ((:or #\l #\L)
+               (when (read-zero-character? exponent-char stream)
+                 (nan 'long-float)))
+              ((:or #\s #\S)
+               (when (read-zero-character? exponent-char stream)
+                 (nan 'short-float)))
+              (t
+               (error 'scheme-reader-error
+                      :details "Invalid way to write a NaN literal.")))))
+      (error 'scheme-reader-error
+             :details (format nil
+                              "The reader expected ~Anan.0"
+                              sign-prefix))))
+
+(defun %read-inf-or-i (sign-prefix negate? stream)
+  (read-char stream nil :eof)
+  (cond ((%delimiter? stream)
+         (* #C(0 1)
+            (if negate? -1 1)))
+        ((always "nf.0" stream)
+         (if (%delimiter? stream)
+             (if negate?
+                 f:double-float-negative-infinity
+                 f:double-float-positive-infinity)
+             (flet ((read-zero-character? (exponent-char stream)
+                      (read-case (stream char)
+                        (#\0 (if (%delimiter? stream)
+                                 t
+                                 (error 'scheme-reader-error
+                                        :details "Invalid way to write an infinity literal.")))
+                        (t
+                         (error 'scheme-reader-error
+                                :details (format nil
+                                                 "Invalid character; ~Ainf.0~A0 expected"
+                                                 sign-prefix
+                                                 exponent-char))))))
+               (read-case (stream exponent-char)
+                 ((:or #\e #\E #\d #\D)
+                  (when (read-zero-character? exponent-char stream)
+                    (if negate?
+                        f:double-float-negative-infinity
+                        f:double-float-positive-infinity)))
+                 ((:or #\f #\F)
+                  (when (read-zero-character? exponent-char stream)
+                    (if negate?
+                        f:single-float-negative-infinity
+                        f:single-float-positive-infinity)))
+                 ((:or #\l #\L)
+                  (when (read-zero-character? exponent-char stream)
+                    (if negate?
+                        f:long-float-negative-infinity
+                        f:long-float-positive-infinity)))
+                 ((:or #\s #\S)
+                  (when (read-zero-character? exponent-char stream)
+                    (if negate?
+                        f:short-float-negative-infinity
+                        f:short-float-positive-infinity)))
+                 (t
+                  (error 'scheme-reader-error
+                         :details "Invalid way to write an infinity literal."))))))
+        (t
+         (error 'scheme-reader-error
+                :details (format nil
+                                 "The reader expected ~Ai or ~Ainf.0"
+                                 sign-prefix
+                                 sign-prefix)))))
+
+(defun %read-sign (stream)
+  (case (peek-char nil stream nil :eof)
+    (:eof (eof-error "when a number was expected"))
+    ((#\+ #\-) (read-char stream))
+    (t nil)))
+
+(defun %read-regular-scheme-number (radix end? negate? stream)
+  (labels ((flonum-radix-error ()
+             (error-unless (= 10 radix)
+                           'scheme-reader-error
+                           :details "A literal flonum must be in base 10."))
+           (read-exponent (number stream float-type)
+             (flonum-radix-error)
+             (let ((negate? (eql #\- (%read-sign stream))))
+               (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                 (error-when (zerop length*)
+                             'scheme-reader-error
+                             :details "An exponent was expected but none was provided")
+                 (* (coerce number float-type)
+                    (expt 10
+                          (* number*
+                             (if negate? -1 1))))))))
+    (multiple-value-bind (number length) (read-scheme-integer stream radix)
+      ;; A leading decimal point implicitly has a 0 in front.
+      ;; Otherwise, no number at the start is an error.
+      (let ((next-char (peek-char nil stream nil :eof)))
+        (error-when (and (zerop length)
+                         (not (eql #\. next-char)))
+                    'scheme-reader-error
+                    :details "No number could be read when a number was expected.")
+        (when (and (zerop length) (eql #\. next-char))
+          (setf (values number length) (values 0 1))))
+      (let ((number (cond ((%delimiter? stream)
+                           number)
+                          (t
+                           (read-case (stream match)
+                             (#\/
+                              (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                                (error-when (zerop length*)
+                                            'scheme-reader-error
+                                            :details "A fraction needs a denominator after the / sign.")
+                                (/ number number*)))
+                             (#\.
+                              (flonum-radix-error)
+                              (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                                (+ number (/ number* (expt 10d0 length*)))))
+                             ((:or #\e #\E #\d #\D)
+                              (read-exponent number stream 'double-float))
+                             ((:or #\f #\F)
+                              (read-exponent number stream 'single-float))
+                             ((:or #\l #\L)
+                              (read-exponent number stream 'long-float))
+                             ((:or #\s #\S)
+                              (read-exponent number stream 'short-float))
+                             (t
+                              (unread-char match stream)
+                              0)))))
+            (delimiter? (%delimiter? stream)))
+        ;; Note: Instead of an error, this failed candidate
+        ;; of a number could be read as a symbol, like in CL
+        ;; and Racket. This is potentially still valid as a
+        ;; symbol in R7RS-small if it began with a . instead
+        ;; of a number, such as .1foo
+        (error-unless delimiter?
+                      'scheme-reader-error
+                      :details "Invalid numerical syntax.")
+        ;; In CL terminology, this stream contains "junk" after the
+        ;; number.
+        (error-when (and end? (not (eql (car delimiter?) :eof)))
+                    'scheme-reader-error
+                    :details "Expected an EOF after reading the number.")
+        (* number (if negate? -1 1))))))
+
 ;;; Reads a Scheme number in the given radix. If end? then it must be
 ;;; the end of the stream after reading the number.
 ;;;
@@ -92,195 +255,42 @@
 ;;; infnan) except the #foo portion of the syntax, which is the
 ;;; prefix and must come first, before the complex.
 (defun %read-scheme-number (stream radix &optional end?)
-  (labels ((read-sign (stream)
-             (case (peek-char nil stream nil :eof)
-               (:eof (eof-error "when a number was expected"))
-               ((#\+ #\-) (read-char stream))
-               (t nil)))
-           (flonum-radix-error ()
-             (error-unless (= 10 radix)
-                           'scheme-reader-error
-                           :details "A literal flonum must be in base 10."))
-           (read-exponent (number stream float-type)
-             (flonum-radix-error)
-             (let ((negate? (eql #\- (read-sign stream))))
-               (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                 (error-when (zerop length*)
-                             'scheme-reader-error
-                             :details "An exponent was expected but none was provided")
-                 (* (coerce number float-type)
-                    (expt 10
-                          (* number*
-                             (if negate? -1 1))))))))
-    (let* ((sign-prefix (read-sign stream))
-           (negate? (eql #\- sign-prefix))
-           (next-char (peek-char nil stream nil :eof)))
-      ;; The special cases, which can only happen if there's a sign
-      ;; prefix, are inf.0, nan.0, or i. As an extension, the extended
-      ;; exponentiation suffix is permitted (with 0 as the only
-      ;; allowed exponent) as a way to get an infinity or NaN of a
-      ;; different floating point type.
-      ;;
-      ;; There are also cases that are not numbers, but symbols. Most
-      ;; trivially, these are + and -.
-      ;;
-      ;; TODO: fixme: failed candidates for inf and nan should be
-      ;; symbols because they begin with + or - like many ordinary
-      ;; symbols.
-      (cond ((%delimiter? stream)
-             sign-prefix)
-            ((or (eql next-char #\n)
-                 (eql next-char #\N))
-             (if (always "nan.0" stream)
-                 (if (%delimiter? stream)
-                     (nan 'double-float)
-                     (flet ((read-zero-character? (exponent-char stream)
-                              (read-case (stream char)
-                                (#\0 (if (%delimiter? stream)
-                                         t
-                                         (error 'scheme-reader-error
-                                                :details "Invalid way to write a NaN literal.")))
-                                (t
-                                 (error 'scheme-reader-error
-                                        :details (format nil
-                                                         "Invalid character; ~Anan.0~A0 expected"
-                                                         sign-prefix
-                                                         exponent-char))))))
-                       (read-case (stream exponent-char)
-                         ((:or #\e #\E #\d #\D)
-                          (when (read-zero-character? exponent-char stream)
-                            (nan 'double-float)))
-                         ((:or #\f #\F)
-                          (when (read-zero-character? exponent-char stream)
-                            (nan 'single-float)))
-                         ((:or #\l #\L)
-                          (when (read-zero-character? exponent-char stream)
-                            (nan 'long-float)))
-                         ((:or #\s #\S)
-                          (when (read-zero-character? exponent-char stream)
-                            (nan 'short-float)))
-                         (t
-                          (error 'scheme-reader-error
-                                 :details "Invalid way to write a NaN literal.")))))
-                 (error 'scheme-reader-error
-                        :details (format nil
-                                         "The reader expected ~Anan.0"
-                                         sign-prefix))))
-            ((or (eql next-char #\i)
-                 (eql next-char #\I))
-             (read-char stream nil :eof)
-             (cond ((%delimiter? stream)
-                    (* #C(0 1)
-                       (if negate? -1 1)))
-                   ((always "nf.0" stream)
-                    (if (%delimiter? stream)
-                        (if negate?
-                            f:double-float-negative-infinity
-                            f:double-float-positive-infinity)
-                        (flet ((read-zero-character? (exponent-char stream)
-                                 (read-case (stream char)
-                                   (#\0 (if (%delimiter? stream)
-                                            t
-                                            (error 'scheme-reader-error
-                                                   :details "Invalid way to write an infinity literal.")))
-                                   (t
-                                    (error 'scheme-reader-error
-                                           :details (format nil
-                                                            "Invalid character; ~Ainf.0~A0 expected"
-                                                            sign-prefix
-                                                            exponent-char))))))
-                          (read-case (stream exponent-char)
-                            ((:or #\e #\E #\d #\D)
-                             (when (read-zero-character? exponent-char stream)
-                               (if negate?
-                                   f:double-float-negative-infinity
-                                   f:double-float-positive-infinity)))
-                            ((:or #\f #\F)
-                             (when (read-zero-character? exponent-char stream)
-                               (if negate?
-                                   f:single-float-negative-infinity
-                                   f:single-float-positive-infinity)))
-                            ((:or #\l #\L)
-                             (when (read-zero-character? exponent-char stream)
-                               (if negate?
-                                   f:long-float-negative-infinity
-                                   f:long-float-positive-infinity)))
-                            ((:or #\s #\S)
-                             (when (read-zero-character? exponent-char stream)
-                               (if negate?
-                                   f:short-float-negative-infinity
-                                   f:short-float-positive-infinity)))
-                            (t
-                             (error 'scheme-reader-error
-                                    :details "Invalid way to write an infinity literal."))))))
-                   (t
-                    (error 'scheme-reader-error
-                           :details (format nil
-                                            "The reader expected ~Ai or ~Ainf.0"
-                                            sign-prefix
-                                            sign-prefix)))))
-            ((and next-char
-                  (or (digit-char-p next-char radix)
-                      (eql next-char #\.)))
-             (multiple-value-bind (number length) (read-scheme-integer stream radix)
-               ;; A leading decimal point implicitly has a 0 in front.
-               ;; Otherwise, no number at the start is an error.
-               (let ((next-char (peek-char nil stream nil :eof)))
-                 (error-when (and (zerop length)
-                                  (not (eql #\. next-char)))
-                             'scheme-reader-error
-                             :details "No number could be read when a number was expected.")
-                 (when (and (zerop length) (eql #\. next-char))
-                   (setf (values number length) (values 0 1))))
-               (let ((number (cond ((%delimiter? stream)
-                                    number)
-                                   (t
-                                    (read-case (stream match)
-                                      (#\/
-                                       (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                                         (error-when (zerop length*)
-                                                     'scheme-reader-error
-                                                     :details "A fraction needs a denominator after the / sign.")
-                                         (/ number number*)))
-                                      (#\.
-                                       (flonum-radix-error)
-                                       (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                                         (+ number (/ number* (expt 10d0 length*)))))
-                                      ((:or #\e #\E #\d #\D)
-                                       (read-exponent number stream 'double-float))
-                                      ((:or #\f #\F)
-                                       (read-exponent number stream 'single-float))
-                                      ((:or #\l #\L)
-                                       (read-exponent number stream 'long-float))
-                                      ((:or #\s #\S)
-                                       (read-exponent number stream 'short-float))
-                                      (t
-                                       (unread-char match stream)
-                                       0)))))
-                     (delimiter? (%delimiter? stream)))
-                 ;; Note: Instead of an error, this failed candidate
-                 ;; of a number could be read as a symbol, like in CL
-                 ;; and Racket. This is potentially still valid as a
-                 ;; symbol in R7RS-small if it began with a . instead
-                 ;; of a number, such as .1foo
-                 (error-unless delimiter?
-                               'scheme-reader-error
-                               :details "Invalid numerical syntax.")
-                 ;; In CL terminology, this stream contains "junk" after the
-                 ;; number.
-                 (error-when (and end? (not (eql (car delimiter?) :eof)))
-                             'scheme-reader-error
-                             :details "Expected an EOF after reading the number.")
-                 (* number (if negate? -1 1)))))
-            ;; For symbols that begin with + or -, such as CL-style
-            ;; constant names, e.g. +foo+
-            (sign-prefix
-             (read-scheme-symbol stream :prefix (make-string 1 :initial-element sign-prefix)))
-            (t
-             (error 'scheme-reader-error
-                    :details (format nil
-                                     "Failure to read a number when reading ~A"
-                                     next-char)))))))
+  (let* ((sign-prefix (%read-sign stream))
+         (negate? (eql #\- sign-prefix))
+         (next-char (peek-char nil stream nil :eof)))
+    ;; The special cases, which can only happen if there's a sign
+    ;; prefix, are inf.0, nan.0, or i. As an extension, the extended
+    ;; exponentiation suffix is permitted (with 0 as the only
+    ;; allowed exponent) as a way to get an infinity or NaN of a
+    ;; different floating point type.
+    ;;
+    ;; There are also cases that are not numbers, but symbols. Most
+    ;; trivially, these are + and -.
+    ;;
+    ;; TODO: fixme: failed candidates for inf and nan should be
+    ;; symbols because they begin with + or - like many ordinary
+    ;; symbols.
+    (cond ((%delimiter? stream)
+           sign-prefix)
+          ((or (eql next-char #\n)
+               (eql next-char #\N))
+           (%read-nan sign-prefix stream))
+          ((or (eql next-char #\i)
+               (eql next-char #\I))
+           (%read-inf-or-i sign-prefix negate? stream))
+          ((and next-char
+                (or (digit-char-p next-char radix)
+                    (eql next-char #\.)))
+           (%read-regular-scheme-number radix end? negate? stream))
+          ;; For symbols that begin with + or -, such as CL-style
+          ;; constant names, e.g. +foo+
+          (sign-prefix
+           (read-scheme-symbol stream :prefix (make-string 1 :initial-element sign-prefix)))
+          (t
+           (error 'scheme-reader-error
+                  :details (format nil
+                                   "Failure to read a number when reading ~A"
+                                   next-char))))))
 
 (defun read-scheme-number (stream &optional (radix 10) end?)
   (let* ((next-char (peek-char nil stream nil :eof))
