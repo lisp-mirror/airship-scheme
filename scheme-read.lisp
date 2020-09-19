@@ -83,46 +83,51 @@
         :for c := (read-char stream nil nil)
         :always (and c (char-equal c c*))))
 
+(defun %read-final-char (starting-string exponent-char default-result sign-prefix stream)
+  (read-case (stream char)
+    (#\0 (if (%delimiter? stream)
+             default-result
+             (let ((string (make-string 8)))
+               (replace string starting-string :start1 1)
+               (setf (aref string 0) sign-prefix
+                     (aref string 6) exponent-char
+                     (aref string 7) #\0)
+               (read-scheme-symbol stream :prefix string))))
+    (:eof
+     (intern (map 'string
+                  #'%invert-case
+                  (format nil
+                          "~A~A~A"
+                          sign-prefix
+                          starting-string
+                          exponent-char))))
+    (t
+     (let ((string (make-string 8)))
+       (replace string starting-string :start1 1)
+       (setf (aref string 0) sign-prefix
+             (aref string 6) exponent-char
+             (aref string 7) char)
+       (read-scheme-symbol stream :prefix string)))))
+
 (defun %read-nan (sign-prefix stream)
   (if (always "nan.0" stream)
       (if (%delimiter? stream)
           (nan 'double-float)
-          (flet ((read-final-char (exponent-char nan-type stream)
-                   (read-case (stream char)
-                     (#\0 (if (%delimiter? stream)
-                              (nan nan-type)
-                              (let ((string (make-string 8)))
-                                (replace string "nan.0" :start1 1)
-                                (setf (aref string 0) sign-prefix
-                                      (aref string 6) exponent-char
-                                      (aref string 7) #\0)
-                                (read-scheme-symbol stream :prefix string))))
-                     (:eof
-                      (intern (map 'string
-                                   #'%invert-case
-                                   (format nil "~Anan.0~A" sign-prefix exponent-char))))
-                     (t
-                      (let ((string (make-string 8)))
-                        (replace string "nan.0" :start1 1)
-                        (setf (aref string 0) sign-prefix
-                              (aref string 6) exponent-char
-                              (aref string 7) char)
-                        (read-scheme-symbol stream :prefix string))))))
-            (read-case (stream exponent-char)
-              ((:or #\e #\E #\d #\D)
-               (read-final-char exponent-char 'double-float stream))
-              ((:or #\f #\F)
-               (read-final-char exponent-char 'single-float stream))
-              ((:or #\l #\L)
-               (read-final-char exponent-char 'long-float stream))
-              ((:or #\s #\S)
-               (read-final-char exponent-char 'short-float stream))
-              (t
-               (let ((string (make-string 7)))
-                 (replace string "nan.0" :start1 1)
-                 (setf (aref string 0) sign-prefix
-                       (aref string 6) exponent-char)
-                 (read-scheme-symbol stream :prefix string))))))
+          (read-case (stream exponent-char)
+            ((:or #\e #\E #\d #\D)
+             (%read-final-char "nan.0" exponent-char (nan 'double-float) sign-prefix stream))
+            ((:or #\f #\F)
+             (%read-final-char "nan.0" exponent-char (nan 'single-float) sign-prefix stream))
+            ((:or #\l #\L)
+             (%read-final-char "nan.0" exponent-char (nan 'long-float) sign-prefix stream))
+            ((:or #\s #\S)
+             (%read-final-char "nan.0" exponent-char (nan 'short-float) sign-prefix stream))
+            (t
+             (let ((string (make-string 7)))
+               (replace string "nan.0" :start1 1)
+               (setf (aref string 0) sign-prefix
+                     (aref string 6) exponent-char)
+               (read-scheme-symbol stream :prefix string)))))
       (error 'scheme-reader-error
              :details (format nil
                               "The reader expected ~Anan.0"
@@ -139,42 +144,45 @@
                (if negate?
                    f:double-float-negative-infinity
                    f:double-float-positive-infinity)
-               (flet ((read-final-char (exponent-char stream)
-                        (read-case (stream char)
-                          (#\0 (if (%delimiter? stream)
-                                   t
-                                   (error 'scheme-reader-error
-                                          :details "Invalid way to write an infinity literal.")))
-                          (t
-                           (error 'scheme-reader-error
-                                  :details (format nil
-                                                   "Invalid character; ~Ainf.0~A0 expected"
-                                                   sign-prefix
-                                                   exponent-char))))))
-                 (read-case (stream exponent-char)
-                   ((:or #\e #\E #\d #\D)
-                    (when (read-final-char exponent-char stream)
-                      (if negate?
-                          f:double-float-negative-infinity
-                          f:double-float-positive-infinity)))
-                   ((:or #\f #\F)
-                    (when (read-final-char exponent-char stream)
-                      (if negate?
-                          f:single-float-negative-infinity
-                          f:single-float-positive-infinity)))
-                   ((:or #\l #\L)
-                    (when (read-final-char exponent-char stream)
-                      (if negate?
-                          f:long-float-negative-infinity
-                          f:long-float-positive-infinity)))
-                   ((:or #\s #\S)
-                    (when (read-final-char exponent-char stream)
-                      (if negate?
-                          f:short-float-negative-infinity
-                          f:short-float-positive-infinity)))
-                   (t
-                    (error 'scheme-reader-error
-                           :details "Invalid way to write an infinity literal."))))))
+               (read-case (stream exponent-char)
+                 ((:or #\e #\E #\d #\D)
+                  (%read-final-char "inf.0"
+                                    exponent-char
+                                    (if negate?
+                                        f:double-float-negative-infinity
+                                        f:double-float-positive-infinity)
+                                    sign-prefix
+                                    stream))
+                 ((:or #\f #\F)
+                  (%read-final-char "inf.0"
+                                    exponent-char
+                                    (if negate?
+                                        f:single-float-negative-infinity
+                                        f:single-float-positive-infinity)
+                                    sign-prefix
+                                    stream))
+                 ((:or #\l #\L)
+                  (%read-final-char "inf.0"
+                                    exponent-char
+                                    (if negate?
+                                        f:long-float-negative-infinity
+                                        f:long-float-positive-infinity)
+                                    sign-prefix
+                                    stream))
+                 ((:or #\s #\S)
+                  (%read-final-char "inf.0"
+                                    exponent-char
+                                    (if negate?
+                                        f:short-float-negative-infinity
+                                        f:short-float-positive-infinity)
+                                    sign-prefix
+                                    stream))
+                 (t
+                  (let ((string (make-string 7)))
+                    (replace string "inf.0" :start1 1)
+                    (setf (aref string 0) sign-prefix
+                          (aref string 6) exponent-char)
+                    (read-scheme-symbol stream :prefix string))))))
           (t
            (error 'scheme-reader-error
                   :details (format nil
