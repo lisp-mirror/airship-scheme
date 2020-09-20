@@ -81,13 +81,13 @@
          (char nil)
          (match? (loop :for c* :across string
                        :for c := (read-char stream nil nil)
-                       :always (and c (char-equal c c*))
-                       :do (progn
-                             (incf i)
-                             (setf char c)))))
+                       :always (progn
+                                 (incf i)
+                                 (setf char c)
+                                 (and c (char-equal c c*))))))
     (when (and (not match?) char)
       (unread-char char stream))
-    (values match? i)))
+    (values match? (1- i))))
 
 (defun %read-final-char (starting-string exponent-char default-result sign-prefix stream)
   (read-case (stream char)
@@ -147,7 +147,6 @@
                               :prefix (format nil
                                               "~A~A"
                                               sign-prefix
-                                              ;; TODO: fixme: fails if shorter like +na or +nan.
                                               (subseq nan 0 index)))))))
 
 (defun %read-inf-or-i (sign-prefix stream)
@@ -197,8 +196,6 @@
                                   :prefix (format nil
                                                   "~A~A"
                                                   sign-prefix
-                                                  ;; TODO fixme: (1+ index) fails if shorter like +in, while
-                                                  ;; not adding 1 to index fails if same length, like +inf.1
                                                   (subseq inf 0 (1+ index)))))))))
 
 (defun %read-sign (stream)
