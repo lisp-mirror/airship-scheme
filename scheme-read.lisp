@@ -121,25 +121,33 @@
       (if match?
           (if (%delimiter? stream)
               (nan 'double-float)
-              (read-case (stream exponent-char)
-                ((:or #\e #\E #\d #\D)
-                 (%read-final-char nan exponent-char (nan 'double-float) sign-prefix stream))
-                ((:or #\f #\F)
-                 (%read-final-char nan exponent-char (nan 'single-float) sign-prefix stream))
-                ((:or #\l #\L)
-                 (%read-final-char nan exponent-char (nan 'long-float) sign-prefix stream))
-                ((:or #\s #\S)
-                 (%read-final-char nan exponent-char (nan 'short-float) sign-prefix stream))
-                (t
-                 (let ((string (make-string 7)))
-                   (replace string nan :start1 1)
-                   (setf (aref string 0) sign-prefix
-                         (aref string 6) exponent-char)
-                   (read-scheme-symbol stream :prefix string)))))
+              (multiple-value-bind (result exponent-char)
+                  (read-case (stream exponent-char)
+                    ((:or #\e #\E #\d #\D)
+                     (values (nan 'double-float)
+                             exponent-char))
+                    ((:or #\f #\F)
+                     (values (nan 'single-float)
+                             exponent-char))
+                    ((:or #\l #\L)
+                     (values (nan 'long-float)
+                             exponent-char))
+                    ((:or #\s #\S)
+                     (values (nan 'short-float)
+                             exponent-char))
+                    (t nil))
+                (if result
+                    (%read-final-char nan exponent-char result sign-prefix stream)
+                    (let ((string (make-string 7)))
+                       (replace string nan :start1 1)
+                       (setf (aref string 0) sign-prefix
+                             (aref string 6) exponent-char)
+                       (read-scheme-symbol stream :prefix string)))))
           (read-scheme-symbol stream
                               :prefix (format nil
                                               "~A~A"
                                               sign-prefix
+                                              ;; TODO: fixme: fails if shorter like +na or +nan.
                                               (subseq nan 0 index)))))))
 
 (defun %read-inf-or-i (sign-prefix stream)
@@ -155,49 +163,42 @@
                   (if negate?
                       f:double-float-negative-infinity
                       f:double-float-positive-infinity)
-                  (read-case (stream exponent-char)
-                    ((:or #\e #\E #\d #\D)
-                     (%read-final-char inf
-                                       exponent-char
-                                       (if negate?
-                                           f:double-float-negative-infinity
-                                           f:double-float-positive-infinity)
-                                       sign-prefix
-                                       stream))
-                    ((:or #\f #\F)
-                     (%read-final-char inf
-                                       exponent-char
-                                       (if negate?
-                                           f:single-float-negative-infinity
-                                           f:single-float-positive-infinity)
-                                       sign-prefix
-                                       stream))
-                    ((:or #\l #\L)
-                     (%read-final-char inf
-                                       exponent-char
-                                       (if negate?
-                                           f:long-float-negative-infinity
-                                           f:long-float-positive-infinity)
-                                       sign-prefix
-                                       stream))
-                    ((:or #\s #\S)
-                     (%read-final-char inf
-                                       exponent-char
-                                       (if negate?
-                                           f:short-float-negative-infinity
-                                           f:short-float-positive-infinity)
-                                       sign-prefix
-                                       stream))
-                    (t
-                     (let ((string (make-string 7)))
-                       (replace string inf :start1 1)
-                       (setf (aref string 0) sign-prefix
-                             (aref string 6) exponent-char)
-                       (read-scheme-symbol stream :prefix string)))))
+                  (multiple-value-bind (result exponent-char)
+                      (read-case (stream exponent-char)
+                        ((:or #\e #\E #\d #\D)
+                         (values (if negate?
+                                     f:double-float-negative-infinity
+                                     f:double-float-positive-infinity)
+                                 exponent-char))
+                        ((:or #\f #\F)
+                         (values (if negate?
+                                     f:single-float-negative-infinity
+                                     f:single-float-positive-infinity)
+                                 exponent-char))
+                        ((:or #\l #\L)
+                         (values (if negate?
+                                     f:long-float-negative-infinity
+                                     f:long-float-positive-infinity)
+                                 exponent-char))
+                        ((:or #\s #\S)
+                         (values (if negate?
+                                     f:short-float-negative-infinity
+                                     f:short-float-positive-infinity)
+                                 exponent-char))
+                        (t nil))
+                    (if result
+                        (%read-final-char inf exponent-char result sign-prefix stream)
+                        (let ((string (make-string 7)))
+                          (replace string inf :start1 1)
+                          (setf (aref string 0) sign-prefix
+                                (aref string 6) exponent-char)
+                          (read-scheme-symbol stream :prefix string)))))
               (read-scheme-symbol stream
                                   :prefix (format nil
                                                   "~A~A"
                                                   sign-prefix
+                                                  ;; TODO fixme: (1+ index) fails if shorter like +in, while
+                                                  ;; not adding 1 to index fails if same length, like +inf.1
                                                   (subseq inf 0 (1+ index)))))))))
 
 (defun %read-sign (stream)
