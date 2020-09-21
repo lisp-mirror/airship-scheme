@@ -7,17 +7,29 @@
 (define-function (mathematical-integer-p :inline t) ((number number))
   (zerop (nth-value 1 (round number))))
 
-(define-function (nanp :inline t) ((number number))
-  "Tests if a number is NaN"
+(define-function (%nanp :inline t) ((number number))
   (and (floatp number) (f:float-nan-p number)))
 
-(define-function (infinitep :inline t) ((number number))
-  "Tests if a number is an infinity"
+(defun nanp (number)
+  "Tests if a number is NaN"
+  (or (%nanp number)
+      (and (complexp number)
+           (or (%nanp (realpart number))
+               (%nanp (imagpart number))))))
+
+(define-function (%infinitep :inline t) ((number number))
   (and (floatp number) (f:float-infinity-p number)))
+
+(defun infinitep (number)
+  "Tests if a number is an infinity"
+  (or (%infinitep number)
+      (and (complexp number)
+           (or (%infinitep (realpart number))
+               (%infinitep (imagpart number))))))
 
 (define-function (finitep :inline t) ((number number))
   "Tests if a number is both not NaN and not an infinity"
-  (not (and (floatp number) (or (infinitep number) (nanp number)))))
+  (not (or (infinitep number) (nanp number))))
 
 ;;;; Type definition macros
 
