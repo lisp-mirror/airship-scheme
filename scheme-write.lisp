@@ -25,7 +25,7 @@
                       (format stream "~A" number)))))
       (complex
        (write-scheme-number (realpart number) stream *print-base*)
-       (when (plusp (imagpart number))
+       (when (and (finitep (imagpart number)) (plusp (imagpart number)))
          (write-char #\+ stream))
        (write-scheme-number (imagpart number) stream *print-base*)
        (write-char #\i stream))))
