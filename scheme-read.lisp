@@ -135,7 +135,7 @@
                     ((:or #\s #\S)
                      (values (nan 'short-float)
                              exponent-char))
-                    (t nil))
+                    (t (values nil exponent-char)))
                 (if result
                     (%read-final-char nan exponent-char result sign-prefix stream)
                     (let ((string (make-string 7)))
@@ -184,7 +184,7 @@
                                      f:short-float-negative-infinity
                                      f:short-float-positive-infinity)
                                  exponent-char))
-                        (t nil))
+                        (t (values nil exponent-char)))
                     (if result
                         (%read-final-char inf exponent-char result sign-prefix stream)
                         (let ((string (make-string 7)))
@@ -282,6 +282,25 @@
 ;;; TODO: complex can support any number on either side (including
 ;;; infnan) except the #foo portion of the syntax, which is the
 ;;; prefix and must come first, before the complex.
+;;;
+;;; TODO: +inf.0+inf.0i
+;;; TODO: -1+4i
+;;; TODO: +4i
+;;; TODO: 4@5
+;;;
+;;; TODO:
+;;;
+;;; That is, all of the currently supported numbers can end in one of:
+;;;
+;;;   i @ + -
+;;;
+;;; If it ends in i then it must be followed by a delimiter.
+;;;
+;;; If it ends in + or - then it must end in another number, which
+;;; must then end in i and then a delimiter.
+;;;
+;;; If it ends in @ then it must end in another number, which must end
+;;; in a delimiter.
 (defun %read-scheme-number (stream radix &optional end?)
   (let* ((sign-prefix (%read-sign stream))
          (next-char (peek-char nil stream nil :eof)))
