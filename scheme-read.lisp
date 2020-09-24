@@ -118,85 +118,86 @@
 (defun %read-nan (sign-prefix stream)
   (let ((nan "nan.0"))
     (multiple-value-bind (match? index) (always nan stream)
-      (if match?
-          (if (%delimiter? stream)
-              (nan 'double-float)
-              (multiple-value-bind (result exponent-char)
-                  (read-case (stream exponent-char)
-                    ((:or #\e #\E #\d #\D)
-                     (values (nan 'double-float)
-                             exponent-char))
-                    ((:or #\f #\F)
-                     (values (nan 'single-float)
-                             exponent-char))
-                    ((:or #\l #\L)
-                     (values (nan 'long-float)
-                             exponent-char))
-                    ((:or #\s #\S)
-                     (values (nan 'short-float)
-                             exponent-char))
-                    (t (values nil exponent-char)))
-                (if result
-                    (%read-final-char nan exponent-char result sign-prefix stream)
-                    (let ((string (make-string 7)))
-                       (replace string nan :start1 1)
-                       (setf (aref string 0) sign-prefix
-                             (aref string 6) exponent-char)
-                       (read-scheme-symbol stream :prefix string)))))
-          (read-scheme-symbol stream
-                              :prefix (format nil
-                                              "~A~A"
-                                              sign-prefix
-                                              (subseq nan 0 index)))))))
+      (cond ((not match?)
+             (read-scheme-symbol stream
+                                 :prefix (format nil
+                                                 "~A~A"
+                                                 sign-prefix
+                                                 (subseq nan 0 index))))
+            ((%delimiter? stream)
+             (nan 'double-float))
+            (t
+             (multiple-value-bind (result exponent-char)
+                 (read-case (stream exponent-char)
+                   ((:or #\e #\E #\d #\D)
+                    (values (nan 'double-float)
+                            exponent-char))
+                   ((:or #\f #\F)
+                    (values (nan 'single-float)
+                            exponent-char))
+                   ((:or #\l #\L)
+                    (values (nan 'long-float)
+                            exponent-char))
+                   ((:or #\s #\S)
+                    (values (nan 'short-float)
+                            exponent-char))
+                   (t (values nil exponent-char)))
+               (if result
+                   (%read-final-char nan exponent-char result sign-prefix stream)
+                   (let ((string (make-string 7)))
+                     (replace string nan :start1 1)
+                     (setf (aref string 0) sign-prefix
+                           (aref string 6) exponent-char)
+                     (read-scheme-symbol stream :prefix string)))))))))
 
 (defun %read-inf-or-i (sign-prefix stream)
   (let ((negate? (eql #\- sign-prefix))
         (inf "inf.0"))
     (read-char stream nil :eof)
     (if (%delimiter? stream)
-        (* #C(0 1)
-           (if negate? -1 1))
+        (complex 0 (if negate? -1 1))
         (multiple-value-bind (match? index) (always (subseq inf 1) stream)
-          (if match?
-              (if (%delimiter? stream)
-                  (if negate?
-                      f:double-float-negative-infinity
-                      f:double-float-positive-infinity)
-                  (multiple-value-bind (result exponent-char)
-                      (read-case (stream exponent-char)
-                        ((:or #\e #\E #\d #\D)
-                         (values (if negate?
-                                     f:double-float-negative-infinity
-                                     f:double-float-positive-infinity)
-                                 exponent-char))
-                        ((:or #\f #\F)
-                         (values (if negate?
-                                     f:single-float-negative-infinity
-                                     f:single-float-positive-infinity)
-                                 exponent-char))
-                        ((:or #\l #\L)
-                         (values (if negate?
-                                     f:long-float-negative-infinity
-                                     f:long-float-positive-infinity)
-                                 exponent-char))
-                        ((:or #\s #\S)
-                         (values (if negate?
-                                     f:short-float-negative-infinity
-                                     f:short-float-positive-infinity)
-                                 exponent-char))
-                        (t (values nil exponent-char)))
-                    (if result
-                        (%read-final-char inf exponent-char result sign-prefix stream)
-                        (let ((string (make-string 7)))
-                          (replace string inf :start1 1)
-                          (setf (aref string 0) sign-prefix
-                                (aref string 6) exponent-char)
-                          (read-scheme-symbol stream :prefix string)))))
-              (read-scheme-symbol stream
-                                  :prefix (format nil
-                                                  "~A~A"
-                                                  sign-prefix
-                                                  (subseq inf 0 (1+ index)))))))))
+          (cond ((not match?)
+                 (read-scheme-symbol stream
+                                     :prefix (format nil
+                                                     "~A~A"
+                                                     sign-prefix
+                                                     (subseq inf 0 (1+ index)))))
+                ((%delimiter? stream)
+                 (if negate?
+                     f:double-float-negative-infinity
+                     f:double-float-positive-infinity))
+                (t
+                 (multiple-value-bind (result exponent-char)
+                     (read-case (stream exponent-char)
+                       ((:or #\e #\E #\d #\D)
+                        (values (if negate?
+                                    f:double-float-negative-infinity
+                                    f:double-float-positive-infinity)
+                                exponent-char))
+                       ((:or #\f #\F)
+                        (values (if negate?
+                                    f:single-float-negative-infinity
+                                    f:single-float-positive-infinity)
+                                exponent-char))
+                       ((:or #\l #\L)
+                        (values (if negate?
+                                    f:long-float-negative-infinity
+                                    f:long-float-positive-infinity)
+                                exponent-char))
+                       ((:or #\s #\S)
+                        (values (if negate?
+                                    f:short-float-negative-infinity
+                                    f:short-float-positive-infinity)
+                                exponent-char))
+                       (t (values nil exponent-char)))
+                   (if result
+                       (%read-final-char inf exponent-char result sign-prefix stream)
+                       (let ((string (make-string 7)))
+                         (replace string inf :start1 1)
+                         (setf (aref string 0) sign-prefix
+                               (aref string 6) exponent-char)
+                         (read-scheme-symbol stream :prefix string))))))))))
 
 (defun %read-sign (stream)
   (case (peek-char nil stream nil :eof)
