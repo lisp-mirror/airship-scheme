@@ -205,73 +205,75 @@
     ((#\+ #\-) (read-char stream))
     (t nil)))
 
+(defun check-flonum-radix (radix)
+  (error-unless (= 10 radix)
+                'scheme-reader-error
+                :details "A literal flonum must be in base 10."))
+
+(defun %read-exponent (number radix stream float-type)
+  (check-flonum-radix radix)
+  (let ((negate? (eql #\- (%read-sign stream))))
+    (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+      (error-when (zerop length*)
+                  'scheme-reader-error
+                  :details "An exponent was expected but none was provided")
+      (* (coerce number float-type)
+         (expt 10
+               (* number*
+                  (if negate? -1 1)))))))
+
 (defun %read-regular-scheme-number (radix end? sign-prefix stream)
-  (labels ((flonum-radix-error ()
-             (error-unless (= 10 radix)
-                           'scheme-reader-error
-                           :details "A literal flonum must be in base 10."))
-           (read-exponent (number stream float-type)
-             (flonum-radix-error)
-             (let ((negate? (eql #\- (%read-sign stream))))
-               (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                 (error-when (zerop length*)
-                             'scheme-reader-error
-                             :details "An exponent was expected but none was provided")
-                 (* (coerce number float-type)
-                    (expt 10
-                          (* number*
-                             (if negate? -1 1))))))))
-    (multiple-value-bind (number length) (read-scheme-integer stream radix)
-      ;; A leading decimal point implicitly has a 0 in front.
-      ;; Otherwise, no number at the start is an error.
-      (let ((next-char (peek-char nil stream nil :eof)))
-        (error-when (and (zerop length)
-                         (not (eql #\. next-char)))
+  (multiple-value-bind (number length) (read-scheme-integer stream radix)
+    ;; A leading decimal point implicitly has a 0 in front.
+    ;; Otherwise, no number at the start is an error.
+    (let ((next-char (peek-char nil stream nil :eof)))
+      (error-when (and (zerop length)
+                       (not (eql #\. next-char)))
+                  'scheme-reader-error
+                  :details "No number could be read when a number was expected.")
+      (when (and (zerop length) (eql #\. next-char))
+        (setf (values number length) (values 0 1))))
+    (let ((number (cond ((%delimiter? stream)
+                         number)
+                        (t
+                         (read-case (stream match)
+                           (#\/
+                            (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                              (error-when (zerop length*)
+                                          'scheme-reader-error
+                                          :details "A fraction needs a denominator after the / sign.")
+                              (/ number number*)))
+                           (#\.
+                            (check-flonum-radix radix)
+                            (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                              (+ number (/ number* (expt 10d0 length*)))))
+                           ((:or #\e #\E #\d #\D)
+                            (%read-exponent number radix stream 'double-float))
+                           ((:or #\f #\F)
+                            (%read-exponent number radix stream 'single-float))
+                           ((:or #\l #\L)
+                            (%read-exponent number radix stream 'long-float))
+                           ((:or #\s #\S)
+                            (%read-exponent number radix stream 'short-float))
+                           (t
+                            (unread-char match stream)
+                            0)))))
+          (delimiter? (%delimiter? stream))
+          (negate? (eql #\- sign-prefix)))
+      ;; Note: Instead of an error, this failed candidate
+      ;; of a number could be read as a symbol, like in CL
+      ;; and Racket. This is potentially still valid as a
+      ;; symbol in R7RS-small if it began with a . instead
+      ;; of a number, such as .1foo
+      (error-unless delimiter?
                     'scheme-reader-error
-                    :details "No number could be read when a number was expected.")
-        (when (and (zerop length) (eql #\. next-char))
-          (setf (values number length) (values 0 1))))
-      (let ((number (cond ((%delimiter? stream)
-                           number)
-                          (t
-                           (read-case (stream match)
-                             (#\/
-                              (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                                (error-when (zerop length*)
-                                            'scheme-reader-error
-                                            :details "A fraction needs a denominator after the / sign.")
-                                (/ number number*)))
-                             (#\.
-                              (flonum-radix-error)
-                              (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                                (+ number (/ number* (expt 10d0 length*)))))
-                             ((:or #\e #\E #\d #\D)
-                              (read-exponent number stream 'double-float))
-                             ((:or #\f #\F)
-                              (read-exponent number stream 'single-float))
-                             ((:or #\l #\L)
-                              (read-exponent number stream 'long-float))
-                             ((:or #\s #\S)
-                              (read-exponent number stream 'short-float))
-                             (t
-                              (unread-char match stream)
-                              0)))))
-            (delimiter? (%delimiter? stream))
-            (negate? (eql #\- sign-prefix)))
-        ;; Note: Instead of an error, this failed candidate
-        ;; of a number could be read as a symbol, like in CL
-        ;; and Racket. This is potentially still valid as a
-        ;; symbol in R7RS-small if it began with a . instead
-        ;; of a number, such as .1foo
-        (error-unless delimiter?
-                      'scheme-reader-error
-                      :details "Invalid numerical syntax.")
-        ;; In CL terminology, this stream contains "junk" after the
-        ;; number.
-        (error-when (and end? (not (eql (car delimiter?) :eof)))
-                    'scheme-reader-error
-                    :details "Expected an EOF after reading the number.")
-        (* number (if negate? -1 1))))))
+                    :details "Invalid numerical syntax.")
+      ;; In CL terminology, this stream contains "junk" after the
+      ;; number.
+      (error-when (and end? (not (eql (car delimiter?) :eof)))
+                  'scheme-reader-error
+                  :details "Expected an EOF after reading the number.")
+      (* number (if negate? -1 1)))))
 
 ;;; Reads a Scheme number in the given radix. If end? then it must be
 ;;; the end of the stream after reading the number.
