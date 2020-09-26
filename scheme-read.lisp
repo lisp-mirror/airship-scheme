@@ -505,6 +505,54 @@
      (error 'scheme-reader-error
             :details (format nil "Reader syntax #~A is not supported!" x)))))
 
+;;; Arbitrary whitespace between #u8 and its parentheses is not
+;;; required to be supported.
+;;;
+;;; Producing this non-conforming syntax is the default behavior in
+;;; paredit for Emacs.
+;;;
+;;; i.e. Paredit produces #u8 () when only #u8() conforms to a strict
+;;; reading of section 7.1.1 of R7RS-small.
+;;;
+;;; If you get this error because of paredit, then you can resolve
+;;; this by adding the following to your .emacs file:
+;;;
+;;;   (setq paredit-space-for-delimiter-predicates '((lambda (endp delimiter) nil)))
+;;;
+;;; The error might be overridable in the future, so the
+;;; whitespace-tracking is maintained even though the whitespace is
+;;; currently an error.
+(defun %read-bytevector (stream)
+  (read-case (stream character)
+    (#\8 (loop :with whitespace? := nil
+               :for c := (read-case (stream c)
+                           ((:or #\Space #\Tab #\Newline)
+                            (unless whitespace?
+                              (error 'scheme-reader-error
+                                     :details #.(concatenate
+                                                 'string
+                                                 "In a strict interpretation of the R7RS-small "
+                                                 "standard in section 7.1.1, whitespace between #u8 "
+                                                 "and its parentheses is not permitted.")))
+                            (setf whitespace? t)
+                            nil)
+                           (#\( t)
+                           (:eof (eof-error "when a \"(\" was expected"))
+                           (t (error 'scheme-reader-error
+                                     :details (format nil "\"(\" expected, but ~A was read." c))))
+               :until c
+               :finally
+                  (return
+                    (handler-case (coerce (scheme-read stream :recursive? t) 'bytevector?)
+                      (type-error (c)
+                        (error 'scheme-type-error
+                               :details "in reading a bytevector"
+                               :datum (type-error-datum c)
+                               :expected-type 'octet))))))
+    (:eof (eof-error "after #u when an 8 was expected"))
+    (t (error 'scheme-reader-error
+              :details (format nil "#u8 expected, but #u~A was read." character)))))
+
 (defun read-special (stream)
   (read-case (stream x)
     (#\|
@@ -523,53 +571,8 @@
          %scheme-boolean:f
          (error 'scheme-reader-error
                 :details "Invalid character(s) after #f")))
-    ;; Arbitrary whitespace between #u8 and its parentheses is not
-    ;; required to be supported.
-    ;;
-    ;; Producing this non-conforming syntax is the default behavior in
-    ;; paredit for Emacs.
-    ;;
-    ;; i.e. Paredit produces #u8 () when only #u8() conforms to a
-    ;; strict reading of section 7.1.1 of R7RS-small.
-    ;;
-    ;; If you get this error because of paredit, then you can resolve
-    ;; this by adding the following to your .emacs file:
-    ;;
-    ;;   (setq paredit-space-for-delimiter-predicates '((lambda (endp delimiter) nil)))
-    ;;
-    ;; The error might be overridable in the future, so the
-    ;; whitespace-tracking is maintained even though the whitespace is
-    ;; currently an error.
     ((:or #\u #\U)
-     (read-case (stream c)
-       (#\8 (loop :with whitespace? := nil
-                  :for c := (read-case (stream c)
-                              ((:or #\Space #\Tab #\Newline)
-                               (unless whitespace?
-                                 (error 'scheme-reader-error
-                                        :details #.(concatenate
-                                                    'string
-                                                    "In a strict interpretation of the R7RS-small "
-                                                    "standard in section 7.1.1, whitespace between #u8 "
-                                                    "and its parentheses is not permitted.")))
-                               (setf whitespace? t)
-                               nil)
-                              (#\( t)
-                              (:eof (eof-error "when a \"(\" was expected"))
-                              (t (error 'scheme-reader-error
-                                        :details (format nil "\"(\" expected, but ~A was read." c))))
-                  :until c
-                  :finally
-                     (return
-                       (handler-case (coerce (scheme-read stream :recursive? t) 'bytevector?)
-                         (type-error (c)
-                           (error 'scheme-type-error
-                                  :details "in reading a bytevector"
-                                  :datum (type-error-datum c)
-                                  :expected-type 'octet))))))
-       (:eof (eof-error "after #u when an 8 was expected"))
-       (t (error 'scheme-reader-error
-                 :details (format nil "#u8 expected, but #u~A was read." c)))))
+     (%read-bytevector stream))
     (#\\
      (%read-literal-character stream))
     (#\(
@@ -728,7 +731,22 @@
                  ((and after-dotted? (not dotted-end?))
                   (error 'scheme-reader-error
                          :details "An expression needs an item after the dot in a dotted list"))
-                 (t nil))))
+                 (t nil)))
+         (possibly-quote (match)
+           (if (member match '(:quote :quasiquote :unquote :unquote-splicing))
+               (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t))
+                     (match* (ecase match
+                               (:quote 'quote)
+                               (:quasiquote 'quasiquote)
+                               (:unquote 'unquote)
+                               (:unquote-splicing 'unquote-splicing))))
+                 (when (endp quoted)
+                   (if recursive?
+                       (error 'scheme-reader-error
+                              :details "Nothing quoted!")
+                       (eof-error "after a quote")))
+                 `(,match* ,@quoted))
+               match)))
     (loop :with limit* :of-type (maybe a:non-negative-fixnum) := limit
           :for old := nil :then (if (and match
                                          (not (eql match :dot)))
@@ -747,21 +765,7 @@
                    (not after-dotted?))
             :do (when limit* (decf limit*))
             :and
-              :collect (if (member match '(:quote :quasiquote :unquote :unquote-splicing))
-                           (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t))
-                                 (match* (ecase match
-                                           (:quote 'quote)
-                                           (:quasiquote 'quasiquote)
-                                           (:unquote 'unquote)
-                                           (:unquote-splicing 'unquote-splicing))))
-                             (when (endp quoted)
-                               (if recursive?
-                                   (error 'scheme-reader-error
-                                          :details "Nothing quoted!")
-                                   (eof-error "after a quote")))
-                             `(,match* ,@quoted))
-                           match)
-                :into s-expression
+              :collect (possibly-quote match) :into s-expression
           :else
             :if (and (not (eql match :skip)) after-dotted?)
               :do (progn
