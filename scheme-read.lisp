@@ -53,6 +53,9 @@
   (member (peek-char nil stream nil :eof)
           '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
 
+(define-function (%negative? :inline t) (character)
+  (eql #\- character))
+
 ;;; If possible, this generates a NaN of the given type of float for
 ;;; +nan.0 and -nan.0
 (defun nan (float-type)
@@ -151,7 +154,7 @@
                      (read-scheme-symbol stream :prefix string)))))))))
 
 (defun %read-inf-or-i (sign-prefix stream)
-  (let ((negate? (eql #\- sign-prefix))
+  (let ((negate? (%negative? sign-prefix))
         (inf "inf.0"))
     (read-char stream nil :eof)
     (if (%delimiter? stream)
@@ -212,7 +215,7 @@
 
 (defun %read-exponent (number radix stream float-type)
   (check-flonum-radix radix)
-  (let ((negate? (eql #\- (%read-sign stream))))
+  (let ((negate? (%negative? (%read-sign stream))))
     (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
       (error-when (zerop length*)
                   'scheme-reader-error
@@ -233,6 +236,7 @@
                   :details "No number could be read when a number was expected.")
       (when (and (zerop length) (eql #\. next-char))
         (setf (values number length) (values 0 1))))
+    ;; TODO: fixme: allow combining a . with an exponent
     (let ((number (cond ((%delimiter? stream)
                          number)
                         (t
@@ -259,7 +263,7 @@
                             (unread-char match stream)
                             0)))))
           (delimiter? (%delimiter? stream))
-          (negate? (eql #\- sign-prefix)))
+          (negate? (%negative? sign-prefix)))
       ;; Note: Instead of an error, this failed candidate
       ;; of a number could be read as a symbol, like in CL
       ;; and Racket. This is potentially still valid as a
