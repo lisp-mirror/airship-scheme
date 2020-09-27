@@ -225,6 +225,19 @@
                (* number*
                   (if negate? -1 1)))))))
 
+(defun read-exponent (number radix stream)
+  (read-case (stream match)
+    ((:or #\e #\E #\d #\D)
+     (%read-exponent number radix stream 'double-float))
+    ((:or #\f #\F)
+     (%read-exponent number radix stream 'single-float))
+    ((:or #\l #\L)
+     (%read-exponent number radix stream 'long-float))
+    ((:or #\s #\S)
+     (%read-exponent number radix stream 'short-float))
+    (t (unread-char match stream)
+       0)))
+
 (defun %read-regular-scheme-number (radix end? sign-prefix stream)
   (multiple-value-bind (number length) (read-scheme-integer stream radix)
     ;; A leading decimal point implicitly has a 0 in front.
@@ -236,7 +249,6 @@
                   :details "No number could be read when a number was expected.")
       (when (and (zerop length) (eql #\. next-char))
         (setf (values number length) (values 0 1))))
-    ;; TODO: fixme: allow combining a . with an exponent
     (let ((number (cond ((%delimiter? stream)
                          number)
                         (t
@@ -250,18 +262,14 @@
                            (#\.
                             (check-flonum-radix radix)
                             (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                              (+ number (/ number* (expt 10d0 length*)))))
-                           ((:or #\e #\E #\d #\D)
-                            (%read-exponent number radix stream 'double-float))
-                           ((:or #\f #\F)
-                            (%read-exponent number radix stream 'single-float))
-                           ((:or #\l #\L)
-                            (%read-exponent number radix stream 'long-float))
-                           ((:or #\s #\S)
-                            (%read-exponent number radix stream 'short-float))
+                              (let ((number (+ number (/ number* (expt 10d0 length*)))))
+                                (if (member (peek-char nil stream nil :eof)
+                                            '(#\e #\E #\d #\D #\f #\F #\l #\L #\s #\S))
+                                    (read-exponent number radix stream)
+                                    number))))
                            (t
                             (unread-char match stream)
-                            0)))))
+                            (read-exponent number radix stream))))))
           (delimiter? (%delimiter? stream))
           (negate? (%negative? sign-prefix)))
       ;; Note: Instead of an error, this failed candidate
