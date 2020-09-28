@@ -98,21 +98,35 @@ detail.](https://en.wikipedia.org/wiki/Scope_(computer_science)#Dynamic_scoping)
 
 ### Type system
 
+Portable Scheme only has the predicates, such as `list?`. Scheme can
+be thought of as being "predicatively" typed. Airship Scheme uses this
+convention in its type names, making its Scheme type names end in `?`.
+
 Technically, Common Lisp isn't just a "Lisp-2". It actually has more
 than two namespaces. The third most popular namespace is the *type*
 namespace, used by types defined by `defclass`, `deftype`, etc. One
 possible solution is to introduce this type namespace to Scheme, but
-standard Scheme is primarily typed by predicates. These could be seen
-as `satisfies` types in CL, but those are inefficient. The simplest
+standard Scheme is predicately typed. These could be seen as
+`satisfies` types in CL, but those are inefficient. The simplest
 efficient solution, then, is to have a `define-scheme-type` macro that
 defines both a type and a predicate of the same name (e.g. `pair?`).
-Normally, the generated predicate can just call `typep`, but there are
-quite a few special cases.
 
-Technically speaking, this type namespace still exists and could be
-accessed through an exposed `type?` predicate in Scheme. For example,
-`(type? foo 'pair?)` would be `#t` if `foo` is a `pair?` even if
-`pair?` has been locally rebound in a `let`.
+Thus, in Airship Scheme, properly defined Scheme types always define a
+corresponding predicate of the same name, but are probably defined in
+a more efficient way (such as `define-scheme-type` on the CL side or
+`define-type` on the Scheme side).
+
+This is generally done by automatically generating a trivially inline
+procedure that calls `typep` (in the CL side) or `type?` (in the
+Airship Scheme side). This means that this abstraction is a
+potentially leaky abstraction since the procedure might be redefined
+locally. However, `type?` will usually behave as expected because
+there is no local way to define a type.
+
+That is, technically speaking, this type namespace still exists and is
+accessed through an exposed `type?` predicate on the Scheme side. For
+example, `(type? foo 'pair?)` would be `#t` if `foo` is a `pair?` even
+if `pair?` has been locally rebound in a `let`.
 
 ### Continuations
 
@@ -157,6 +171,14 @@ procedure.
 Differing conventions
 ---------------------
 
+In general, Common Lisp has more consistent conventions than Scheme,
+with a few notable exceptions, such as Scheme's `!` naming convention
+for procedures with side effects. Where a clear convention exists in
+Scheme, Airship Scheme will follow that Scheme convention. Otherwise,
+Airship Scheme will borrow the convention from Common Lisp to ease
+interoperability, even if this convention hasn't been seen in Scheme
+before.
+
 ### Comments
 
 In Common Lisp, end-of-line comments start with `;`. Comments on their
@@ -196,6 +218,15 @@ the three different levels of `;`s:
 
 ### Naming conventions
 
+In Common Lisp, a slight variation of `foo` is usually called `foo*`.
+Something that's for low-level or internal-use is often called `%foo`.
+Airship Scheme uses this same convention.
+
+Scheme uses `foo->bar` for conversion procedures while Common Lisp
+tends to use `foo-to-bar`.
+
+#### Predicates
+
 In Common Lisp, predicates end with `p`. The old convention is to end
 with `p` if it is one word, such as `foop`, and end with `-p` if it is
 more than one word, such as `foo-bar-p`. A newer convention is to
@@ -207,24 +238,40 @@ sense to make something look like it is a Common Lisp built-in, in
 particular when writing Common Lisp functions for
 `standard-procedures.lisp` to wrap.
 
-Scheme procedures with side effects end in `!`, e.g. `foo!`, making it
-easy to tell when something is pure or not. In Common Lisp, there is
-no direct equivalent, but `nfoo` (where `n` stands for "nonconsing")
-and `foof` (in the style of `setf` or `incf`) are often used. Both are
-problematic because a function with side effects *can* still be
-"consing" (i.e. heap-allocating) and `foof` is specifically for
-dealing with "places". For that reason, Common Lisp code that must
+#### Side effects
+
+Most Scheme procedures with side effects end in `!`, e.g. `foo!`,
+making it easy to tell when something is pure or not. In Common Lisp,
+there is no direct equivalent, but `nfoo` (where `n` stands for
+"nonconsing") and `foof` (in the style of `setf` or `incf`) are often
+used. Both are problematic because a function with side effects *can*
+still be "consing" (i.e. heap-allocating) and `foof` is specifically
+for dealing with "places". For that reason, Common Lisp code that must
 distinguish side effects in a clear way should use `!`, but that's not
 as necessary in Common Lisp as in Scheme. In this project, `!` should
 be used.
 
-Scheme uses `foo->bar` for conversion procedures while Common Lisp
-tends to use `foo-to-bar`.
+Some built-in Scheme procedures with side effects do not end in `!`,
+such as `display`. This is for historical reasons. New Scheme
+procedures with side effects should end in `!`, but I/O procedures in
+the style of `display` might still seem more idiomatic to exclude it.
+
+#### Global constants and variables
+
+Common Lisp constants are surrounded in `+`s, like `+foo+`. Scheme
+does not have a consistent convention for constants, but some Scheme
+readers might not recognize tokens beginning with `+` that aren't the
+symbol `+` itself (used for addition) as a symbol because `+` is also
+a numeric prefix (e.g. `+42` is a number). Airship Scheme does not
+have this limitation, and so will use the Common Lisp `+foo+` naming
+convention for its constants.
 
 Common Lisp global variables use "earmuffs", like `*foo*`. However,
 this is actually just a side effect of all portable Common Lisp global
 variables being dynamic (special) variables. Portable Scheme does not
 have dynamically scoped variables.
+
+#### Definitions
 
 In Common Lisp, `deffoo` is usually used for single word defines
 instead of `define-foo`, while `define-foo-bar` is always used for
@@ -241,6 +288,39 @@ important than with predicates. (An Airship Scheme wrapper of Common
 Lisp code really could use a tool that automatically distinguishes
 between predicates and non-predicates due to how the wrapping process
 works, but Airship Scheme is a rare, special case in its needs.)
+
+#### Type names
+
+Common Lisp types are generally written like everything else, in lower
+case, and often have name collisions (e.g. `list` the type and `list`
+the function that creates a list) that aren't an issue because the
+type namespace is a separate namespace (similar to how variables and
+functions have different namespaces). Scheme types are inconsistent,
+but many implementations capitalize the start of a type name, e.g.
+`List`.
+
+As mentioned earlier, Airship Scheme uses the predicate convention in
+its type names, so all of its Scheme types should end in `?`. This is
+enforced through `define-scheme-type` on the CL side or `define-type`
+on the Scheme side.
+
+There are some built-in ways to define types in ways that might
+violate this, but it is still maintained by convention to have the
+type and the predicate to test for the type have the same name. In
+Airship Scheme it is conventional to use the same name for the `name`
+and the `predicate` parts of `define-record-type`, although they can
+be different.
+
+Scheme rarely provides efficient versions of various types, preferring
+the plainer definition, even if it requires a runtime predicate test.
+`exact-integer?` instead of `integer?` is a good example of where
+Scheme provides an efficient way, since `exact-integer?` will test for
+the underlying integer type (e.g. `42`) while `integer?` will test for
+the mathematical concept (including `42.0`).
+
+When efficient versions don't exist, Airship Scheme will have to
+define them, such as `%list?`, which permits improper lists and should
+be preferred when working with lists.
 
 *Cliki (the Common Lisp wiki) mentions the [Common Lisp naming
 conventions](https://www.cliki.net/Naming+conventions) in general and
