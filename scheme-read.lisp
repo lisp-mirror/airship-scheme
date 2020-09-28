@@ -238,6 +238,26 @@
     (t (unread-char match stream)
        0)))
 
+(defun %read-scheme-number-suffix (number radix stream)
+  (read-case (stream match)
+    (#\/
+     (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+       (error-when (zerop length*)
+                   'scheme-reader-error
+                   :details "A fraction needs a denominator after the / sign.")
+       (/ number number*)))
+    (#\.
+     (check-flonum-radix radix)
+     (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+       (let ((number (+ number (/ number* (expt 10d0 length*)))))
+         (if (member (peek-char nil stream nil :eof)
+                     '(#\e #\E #\d #\D #\f #\F #\l #\L #\s #\S))
+             (read-exponent number radix stream)
+             number))))
+    (t
+     (unread-char match stream)
+     (read-exponent number radix stream))))
+
 (defun %read-regular-scheme-number (radix end? sign-prefix stream)
   (multiple-value-bind (number length) (read-scheme-integer stream radix)
     ;; A leading decimal point implicitly has a 0 in front.
@@ -249,27 +269,9 @@
                   :details "No number could be read when a number was expected.")
       (when (and (zerop length) (eql #\. next-char))
         (setf (values number length) (values 0 1))))
-    (let ((number (cond ((%delimiter? stream)
-                         number)
-                        (t
-                         (read-case (stream match)
-                           (#\/
-                            (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                              (error-when (zerop length*)
-                                          'scheme-reader-error
-                                          :details "A fraction needs a denominator after the / sign.")
-                              (/ number number*)))
-                           (#\.
-                            (check-flonum-radix radix)
-                            (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                              (let ((number (+ number (/ number* (expt 10d0 length*)))))
-                                (if (member (peek-char nil stream nil :eof)
-                                            '(#\e #\E #\d #\D #\f #\F #\l #\L #\s #\S))
-                                    (read-exponent number radix stream)
-                                    number))))
-                           (t
-                            (unread-char match stream)
-                            (read-exponent number radix stream))))))
+    (let ((number (if (%delimiter? stream)
+                      number
+                      (%read-scheme-number-suffix number radix stream)))
           (delimiter? (%delimiter? stream))
           (negate? (%negative? sign-prefix)))
       ;; Note: Instead of an error, this failed candidate
