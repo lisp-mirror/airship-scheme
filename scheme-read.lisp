@@ -236,7 +236,7 @@
     ((:or #\s #\S)
      (%read-exponent number radix stream 'short-float))
     (t (unread-char match stream)
-       0)))
+       number)))
 
 (defun %read-scheme-number-suffix (number radix stream)
   (read-case (stream match)
@@ -279,15 +279,24 @@
       ;; and Racket. This is potentially still valid as a
       ;; symbol in R7RS-small if it began with a . instead
       ;; of a number, such as .1foo
-      (error-unless delimiter?
+      (let ((number (cond (delimiter?
+                           number)
+                          ((eql #\i (peek-char nil stream nil :eof))
+                           (read-char stream nil :eof)
+                           (setf delimiter? (%delimiter? stream))
+                           (if (and sign-prefix delimiter?)
+                               (complex 0 number)
+                               (error 'scheme-reader-error
+                                      :details "Invalid numerical syntax.")))
+                          (t
+                           (error 'scheme-reader-error
+                                  :details "Invalid numerical syntax.")))))
+        ;; In CL terminology, this stream contains "junk" after the
+        ;; number.
+        (error-when (and end? (not (eql (car delimiter?) :eof)))
                     'scheme-reader-error
-                    :details "Invalid numerical syntax.")
-      ;; In CL terminology, this stream contains "junk" after the
-      ;; number.
-      (error-when (and end? (not (eql (car delimiter?) :eof)))
-                  'scheme-reader-error
-                  :details "Expected an EOF after reading the number.")
-      (* number (if negate? -1 1)))))
+                    :details "Expected an EOF after reading the number.")
+        (* number (if negate? -1 1))))))
 
 ;;; Reads a Scheme number in the given radix. If end? then it must be
 ;;; the end of the stream after reading the number.
@@ -301,8 +310,10 @@
 ;;; prefix and must come first, before the complex.
 ;;;
 ;;; TODO: +inf.0+inf.0i
+;;; TODO: 4-inf.0i
+;;; TODO: +inf.0-3i
+;;; TODO: +inf.0i
 ;;; TODO: -1+4i
-;;; TODO: +4i
 ;;; TODO: 4@5
 ;;;
 ;;; TODO:
