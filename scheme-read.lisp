@@ -359,6 +359,7 @@
                                    "Failure to read a number when reading ~A"
                                    next-char))))))
 
+;;; Reads a number for the Scheme reader or string-to-number.
 (defun read-scheme-number (stream &optional (radix 10) end?)
   (let* ((next-char (peek-char nil stream nil :eof))
          (possible-number (if (eql next-char #\#)
@@ -370,11 +371,15 @@
         possible-number
         nil)))
 
+;;; Converts a string to a number using Scheme's numeric syntax. This
+;;; is used for string->number.
 (defun string-to-number (string &optional (radix 10))
   (with-input-from-string (in string)
     (handler-case (read-scheme-number in radix t)
       (scheme-reader-error nil))))
 
+;;; A line comment skips the rest of the stream unless there is a
+;;; newline that ends the comment..
 (defun read-line-comment (stream)
   (loop :for match := (read-case (stream c)
                         (#\Newline :newline)
@@ -383,6 +388,8 @@
         :until match
         :finally (return :skip)))
 
+;;; A block comment comments everything between #| and |# and allows
+;;; these to be nested. The final |# exits the block comment.
 (defun read-block-comment (stream)
   (loop :for prior-match := nil :then match
         :for match := (read-case (stream c)
@@ -401,6 +408,8 @@
                      (return :skip)
                      (eof-error "inside of a block comment"))))
 
+;;; The standard supports these escape characters in strings and a few
+;;; other places. For instance, \n becomes a newline.
 (define-function (%one-char-escape :inline t) (char)
   (case char
     (#\n (code-char #x000a))
@@ -437,6 +446,8 @@
                              (subseq buffer 0 (fill-pointer buffer))
                              (eof-error "inside of a string")))))
 
+;;; Determine which base the number is in based on a literal syntax.
+;;; For example, #x means that it's in hexadecimal.
 (defun %find-read-base (stream &optional (radix 10))
   (let ((next-char (peek-char nil stream nil :eof)))
     (case next-char
@@ -453,6 +464,10 @@
       (:eof (eof-error "when a number was expected"))
       (t radix))))
 
+;;; Reads a number that has a provided base, such as #x for
+;;; hexadecimal. If it is followed by #e then it is read as an exact
+;;; (non-float) and if it is followed by #i then it is read as an
+;;; inexact (float).
 (defun %read-in-base (stream base)
   (let* ((next-char (peek-char nil stream nil :eof))
          (exactness (case next-char
@@ -473,6 +488,9 @@
         (funcall exactness number)
         number)))
 
+;;; Literal reader syntax for a character. This is either one
+;;; character, like #\a, or it is a hex escape, like #\x42, or it is a
+;;; named character, like #\newline.
 (defun %read-literal-character (stream)
   (read-case (stream c)
     ((:or #\x #\X)
@@ -575,6 +593,7 @@
     (t (error 'scheme-reader-error
               :details (format nil "#u8 expected, but #u~A was read." character)))))
 
+;;; Reads a token that starts with a # (hashtag).
 (defun read-special (stream)
   (read-case (stream x)
     (#\|
@@ -607,6 +626,8 @@
      (unread-char x stream)
      (%read-special stream))))
 
+;;; Reads a Scheme symbol that is escaped with the literal ||
+;;; notation, like |foo|.
 (defun read-escaped-scheme-symbol (stream &optional (package *package*))
   (loop :for after-escape? := nil :then escape?
         :for char := (read-case (stream c)
@@ -627,6 +648,7 @@
         :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
                                  package))))
 
+;;; Reads until the delimiter and turns it into a Scheme symbol.
 (defun read-scheme-symbol (stream &key (package *package*) prefix)
   (loop :for char := (read-case (stream c)
                        (#\(
@@ -668,6 +690,8 @@
            (unread-char match stream)
            (read-scheme-symbol stream)))))
 
+;;; Reads a character and determines what to do with it based on the
+;;; Scheme syntax specification.
 (defun read-scheme-character* (stream)
   (read-case (stream match)
     (#\( (scheme-read stream :recursive? t))
@@ -702,6 +726,8 @@
      (unread-char match stream)
      (read-scheme-symbol stream))))
 
+;;; Wraps around `read-scheme-character*' to handle a few special
+;;; cases, like #;-style comments.
 (defun read-scheme-character (stream)
   (loop :for match := (let ((match* (read-scheme-character* stream)))
                         (if (eql match* :skip-next)
