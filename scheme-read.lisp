@@ -502,7 +502,7 @@
                            (not (%delimiter? stream)))
                        'scheme-reader-error
                        :details "Invalid hexadecimal number.")
-           number)))
+           (code-char number))))
     (t
      (if (%delimiter? stream)
          c
