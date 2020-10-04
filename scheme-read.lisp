@@ -92,7 +92,7 @@
       (unread-char char stream))
     (values match? (1- i))))
 
-(defun %read-final-char (starting-string exponent-char default-result sign-prefix stream)
+(defun %read-final-char (starting-string result exponent-char sign-prefix stream)
   (flet ((read-as-symbol (char)
            (let ((string (make-string 8)))
              (replace string starting-string :start1 1)
@@ -100,20 +100,26 @@
                    (aref string 6) exponent-char
                    (aref string 7) char)
              (read-scheme-symbol stream :prefix string))))
-    (read-case (stream char)
-      (#\0 (if (%delimiter? stream)
-               default-result
-               (read-as-symbol char)))
-      (:eof
-       (intern (map 'string
-                    #'%invert-case
-                    (format nil
-                            "~A~A~A"
-                            sign-prefix
-                            starting-string
-                            exponent-char))))
-      (t
-       (read-as-symbol char)))))
+    (if result
+        (read-case (stream char)
+          (#\0 (if (%delimiter? stream)
+                   result
+                   (read-as-symbol char)))
+          (:eof
+           (intern (map 'string
+                        #'%invert-case
+                        (format nil
+                                "~A~A~A"
+                                sign-prefix
+                                starting-string
+                                exponent-char))))
+          (t
+           (read-as-symbol char)))
+        (let ((string (make-string 7)))
+          (replace string starting-string :start1 1)
+          (setf (aref string 0) sign-prefix
+                (aref string 6) exponent-char)
+          (read-scheme-symbol stream :prefix string)))))
 
 (defun %read-nan (sign-prefix stream)
   (let ((nan "nan.0"))
@@ -142,13 +148,7 @@
                     (values (nan 'short-float)
                             exponent-char))
                    (t (values nil exponent-char)))
-               (if result
-                   (%read-final-char nan exponent-char result sign-prefix stream)
-                   (let ((string (make-string 7)))
-                     (replace string nan :start1 1)
-                     (setf (aref string 0) sign-prefix
-                           (aref string 6) exponent-char)
-                     (read-scheme-symbol stream :prefix string)))))))))
+               (%read-final-char nan result exponent-char sign-prefix stream)))))))
 
 (defun %read-inf-or-i (sign-prefix stream)
   (let ((negate? (%negative? sign-prefix))
@@ -191,13 +191,7 @@
                                     f:short-float-positive-infinity)
                                 exponent-char))
                        (t (values nil exponent-char)))
-                   (if result
-                       (%read-final-char inf exponent-char result sign-prefix stream)
-                       (let ((string (make-string 7)))
-                         (replace string inf :start1 1)
-                         (setf (aref string 0) sign-prefix
-                               (aref string 6) exponent-char)
-                         (read-scheme-symbol stream :prefix string))))))))))
+                   (%read-final-char inf result exponent-char sign-prefix stream))))))))
 
 (defun %read-sign (stream)
   (case (peek-char nil stream nil :eof)
