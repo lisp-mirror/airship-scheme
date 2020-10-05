@@ -56,11 +56,33 @@
 (define-function (%negative? :inline t) (character)
   (eql #\- character))
 
-;;; If possible, this generates a NaN of the given type of float for
-;;; +nan.0 and -nan.0
+;;; If possible, this generates a NaN of the given type of float; used
+;;; for +nan.0 and -nan.0
 (defun nan (float-type)
   (let ((zero (coerce 0 float-type)))
     (f:with-float-traps-masked t (/ zero zero))))
+
+;;; If possible, this retrieves a positive or negative infinity of the
+;;; given type of float; used for +inf.0 and -inf.0
+(define-function (inf :inline t) (float-type negate?)
+  (declare (optimize (speed 3)))
+  (ecase float-type
+    (double-float
+     (if negate?
+         f:double-float-negative-infinity
+         f:double-float-positive-infinity))
+    (single-float
+     (if negate?
+         f:single-float-negative-infinity
+         f:single-float-positive-infinity))
+    (long-float
+     (if negate?
+         f:long-float-negative-infinity
+         f:long-float-positive-infinity))
+    (short-float
+     (if negate?
+         f:short-float-negative-infinity
+         f:short-float-positive-infinity))))
 
 ;;; Reads an integer of the given radix
 (defun read-scheme-integer (stream &optional (radix 10))
@@ -171,24 +193,16 @@
                  (multiple-value-bind (result exponent-char)
                      (read-case (stream exponent-char)
                        ((:or #\e #\E #\d #\D)
-                        (values (if negate?
-                                    f:double-float-negative-infinity
-                                    f:double-float-positive-infinity)
+                        (values (inf 'double-float negate?)
                                 exponent-char))
                        ((:or #\f #\F)
-                        (values (if negate?
-                                    f:single-float-negative-infinity
-                                    f:single-float-positive-infinity)
+                        (values (inf 'single-float negate?)
                                 exponent-char))
                        ((:or #\l #\L)
-                        (values (if negate?
-                                    f:long-float-negative-infinity
-                                    f:long-float-positive-infinity)
+                        (values (inf 'long-float negate?)
                                 exponent-char))
                        ((:or #\s #\S)
-                        (values (if negate?
-                                    f:short-float-negative-infinity
-                                    f:short-float-positive-infinity)
+                        (values (inf 'short-float negate?)
                                 exponent-char))
                        (t (values nil exponent-char)))
                    (%read-final-char inf result exponent-char sign-prefix stream))))))))
