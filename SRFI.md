@@ -170,7 +170,7 @@
 | [SRFI 163]     |                          |                                             |
 | [SRFI 164]     |                          |                                             |
 | [SRFI 165]     |                          |                                             |
-| [SRFI 166]     | Draft                    |                                             |
+| [SRFI 166]     |                          |                                             |
 | [SRFI 167]     |                          |                                             |
 | [SRFI 168]     |                          |                                             |
 | [SRFI 169]     |                          |                                             |
@@ -182,10 +182,10 @@
 | [SRFI 175]     |                          |                                             |
 | [SRFI 176]     |                          |                                             |
 | [SRFI 177]     | Draft                    |                                             |
-| [SRFI 178]     | Draft                    |                                             |
+| [SRFI 178]     |                          |                                             |
 | [SRFI 179]     |                          |                                             |
 | [SRFI 180]     |                          |                                             |
-| [SRFI 181]     | Draft                    |                                             |
+| [SRFI 181]     |                          |                                             |
 | ~~[SRFI 182]~~ | *Withdrawn*              |                                             |
 | ~~[SRFI 183]~~ | *Withdrawn*              |                                             |
 | ~~[SRFI 184]~~ | *Withdrawn*              |                                             |
@@ -196,18 +196,18 @@
 | [SRFI 189]     |                          |                                             |
 | [SRFI 190]     |                          |                                             |
 | ~~[SRFI 191]~~ | *Withdrawn*              |                                             |
-| [SRFI 192]     | Draft                    |                                             |
-| [SRFI 193]     | Draft                    |                                             |
-| [SRFI 194]     | Draft                    |                                             |
-| [SRFI 195]     | Draft                    |                                             |
-| [SRFI 196]     | Draft                    |                                             |
-| [SRFI 197]     | Draft                    |                                             |
-| [SRFI 198]     | Draft                    |                                             |
+| [SRFI 192]     |                          |                                             |
+| [SRFI 193]     |                          |                                             |
+| [SRFI 194]     |                          |                                             |
+| [SRFI 195]     |                          |                                             |
+| [SRFI 196]     |                          |                                             |
+| [SRFI 197]     |                          |                                             |
+| ~~[SRFI 198]~~ | *Withdrawn*              |                                             |
 | ~~[SRFI 199]~~ | *Withdrawn*              |                                             |
 | [SRFI 200]     | Draft                    |                                             |
 | [SRFI 201]     | Draft                    |                                             |
 | [SRFI 202]     | Draft                    |                                             |
-| [SRFI 203]     | Draft                    |                                             |
+| [SRFI 203]     |                          |                                             |
 | [SRFI 204]     | Draft                    |                                             |
 | [SRFI 205]     | Draft                    |                                             |
 
