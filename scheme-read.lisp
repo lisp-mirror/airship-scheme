@@ -59,14 +59,15 @@
 ;;; If possible, this generates a NaN of the given type of float; used
 ;;; for +nan.0 and -nan.0
 (defun nan (float-type)
-  (let ((zero (coerce 0 float-type)))
-    (f:with-float-traps-masked t (/ zero zero))))
+  (and float-type
+       (let ((zero (coerce 0 float-type)))
+         (f:with-float-traps-masked t (/ zero zero)))))
 
 ;;; If possible, this retrieves a positive or negative infinity of the
 ;;; given type of float; used for +inf.0 and -inf.0
-(define-function (inf :inline t) (float-type negate?)
+(define-function (inf :inline t) (float-type &optional negate?)
   (declare (optimize (speed 3)))
-  (ecase float-type
+  (case float-type
     (double-float
      (if negate?
          f:double-float-negative-infinity
@@ -82,7 +83,8 @@
     (short-float
      (if negate?
          f:short-float-negative-infinity
-         f:short-float-positive-infinity))))
+         f:short-float-positive-infinity))
+    (t nil)))
 
 ;;; Reads an integer of the given radix
 (defun read-scheme-integer (stream &optional (radix 10))
@@ -158,19 +160,15 @@
              (multiple-value-bind (result exponent-char)
                  (read-case (stream exponent-char)
                    ((:or #\e #\E #\d #\D)
-                    (values (nan 'double-float)
-                            exponent-char))
+                    (values 'double-float exponent-char))
                    ((:or #\f #\F)
-                    (values (nan 'single-float)
-                            exponent-char))
+                    (values 'single-float exponent-char))
                    ((:or #\l #\L)
-                    (values (nan 'long-float)
-                            exponent-char))
+                    (values 'long-float exponent-char))
                    ((:or #\s #\S)
-                    (values (nan 'short-float)
-                            exponent-char))
+                    (values 'short-float exponent-char))
                    (t (values nil exponent-char)))
-               (%read-final-char nan result exponent-char sign-prefix stream)))))))
+               (%read-final-char nan (nan result) exponent-char sign-prefix stream)))))))
 
 (defun %read-inf-or-i (sign-prefix stream)
   (let ((negate? (%negative? sign-prefix))
@@ -186,9 +184,9 @@
                                                      sign-prefix
                                                      (subseq inf 0 (1+ index)))))
                 ((%delimiter? stream)
-                 (if negate?
-                     f:double-float-negative-infinity
-                     f:double-float-positive-infinity))
+                 ;; Yes, most of INF's code is unreachable.
+                 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
+                   (inf 'double-float negate?)))
                 (t
                  (multiple-value-bind (result exponent-char)
                      (read-case (stream exponent-char)
@@ -201,10 +199,7 @@
                        ((:or #\s #\S)
                         (values 'short-float exponent-char))
                        (t (values nil exponent-char)))
-                   (let ((result (if result
-                                     (inf result negate?)
-                                     nil)))
-                     (%read-final-char inf result exponent-char sign-prefix stream)))))))))
+                   (%read-final-char inf (inf result negate?) exponent-char sign-prefix stream))))))))
 
 (defun %read-sign (stream)
   (case (peek-char nil stream nil :eof)
