@@ -49,9 +49,12 @@
 (defmacro eof-error (details)
   `(error 'scheme-reader-eof-error :details ,details))
 
+(deftype delimiter ()
+  `(member #\Space #\Newline #\( #\) #\; #\" #\Tab :eof))
+
 (define-function (%delimiter? :inline t) (stream)
-  (member (peek-char nil stream nil :eof)
-          '(#\Space #\Newline #\( #\) #\; #\" #\Tab :eof)))
+  (typep (peek-char nil stream nil :eof)
+         'delimiter))
 
 (define-function (%negative? :inline t) (character)
   (eql #\- character))
@@ -292,7 +295,9 @@
                                   :details "Invalid numerical syntax.")))))
         ;; In CL terminology, this stream contains "junk" after the
         ;; number.
-        (error-when (and end? (not (eql (car delimiter?) :eof)))
+        ;;
+        ;; TODO: fixme: This doesn't behave as expected.
+        (error-when (and end? (not (eql (peek-char nil stream nil :eof) :eof)))
                     'scheme-reader-error
                     :details "Expected an EOF after reading the number.")
         (* number (if negate? -1 1))))))
