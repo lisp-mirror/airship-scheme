@@ -53,8 +53,8 @@
   `(member #\Space #\Newline #\( #\) #\; #\" #\Tab :eof))
 
 (define-function (%delimiter? :inline t) (stream)
-  (typep (peek-char nil stream nil :eof)
-         'delimiter))
+  (let ((char (peek-char nil stream nil :eof)))
+    (and (typep char 'delimiter) char)))
 
 (define-function (%negative? :inline t) (character)
   (eql #\- character))
@@ -295,9 +295,7 @@
                                   :details "Invalid numerical syntax.")))))
         ;; In CL terminology, this stream contains "junk" after the
         ;; number.
-        ;;
-        ;; TODO: fixme: This doesn't behave as expected.
-        (error-when (and end? (not (eql (peek-char nil stream nil :eof) :eof)))
+        (error-when (and end? (not (eql delimiter? :eof)))
                     'scheme-reader-error
                     :details "Expected an EOF after reading the number.")
         (* number (if negate? -1 1))))))
