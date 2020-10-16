@@ -80,5 +80,27 @@ though. |#
 ;;; comment. Here's an example of that:
 #| #| (display "Hello, world!\n") |# (display "Hello world\n") |#
 
-;;;; The rest of the syntax will be demonstrated here, but this file
-;;;; is currently incomplete.
+;;;; Numeric syntax
+
+;;;; TODO: Not every kind of literal number is included here yet.
+
+(define numbers
+  (list 1
+        -1
+        1.0
+        1.0f0
+        -1.2s3
+        1.0l-1
+        3d1
+        87e2
+        4/3
+        -3/2
+        +inf.0
+        -inf.0
+        +nan.0
+        -nan.0
+        -4i
+        +3i))
+
+;;;; TODO: The rest of the syntax will be demonstrated here, but this
+;;;; file is currently incomplete.
