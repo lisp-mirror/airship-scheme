@@ -46,6 +46,25 @@
                      (type-error-datum condition))))
   (:documentation "A type error internal to the Scheme runtime."))
 
+(defun unicode-reader-error ()
+  (error 'scheme-reader-error
+         :details #.(concatenate 'string
+                                 "An identifier cannot start with a Unicode character "
+                                 "in the general categories of Nd, Mc, or Me. To portably "
+                                 "do this, first wrap the identifier in vertical lines "
+                                 "like |foo|.")))
+
+;;; Note: A configuration option could make this a style warning for
+;;; added compatibility.
+(defun whitespace-in-u8-error (whitespace?)
+  (error-unless whitespace?
+                'scheme-reader-error
+                :details #.(concatenate
+                            'string
+                            "In a strict interpretation of the R7RS-small "
+                            "standard in section 7.1.1, whitespace between #u8 "
+                            "and its parentheses is not permitted.")))
+
 (defmacro eof-error (details)
   `(error 'scheme-reader-eof-error :details ,details))
 
@@ -563,22 +582,12 @@
 ;;; this by adding the following to your .emacs file:
 ;;;
 ;;;   (setq paredit-space-for-delimiter-predicates '((lambda (endp delimiter) nil)))
-;;;
-;;; The error might be overridable in the future, so the
-;;; whitespace-tracking is maintained even though the whitespace is
-;;; currently an error.
 (defun %read-bytevector (stream)
   (read-case (stream character)
     (#\8 (loop :with whitespace? := nil
                :for c := (read-case (stream c)
                            ((:or #\Space #\Tab #\Newline)
-                            (unless whitespace?
-                              (error 'scheme-reader-error
-                                     :details #.(concatenate
-                                                 'string
-                                                 "In a strict interpretation of the R7RS-small "
-                                                 "standard in section 7.1.1, whitespace between #u8 "
-                                                 "and its parentheses is not permitted.")))
+                            (whitespace-in-u8-error whitespace?)
                             (setf whitespace? t)
                             nil)
                            (#\( t)
@@ -721,12 +730,7 @@
     ((:or :nd :mc :me)
      ;; Note: Many Schemes disregard this rule, but this is mandated
      ;; by section 7.1.1 of r7rs.pdf.
-     (error 'scheme-reader-error
-            :details #.(concatenate 'string
-                                    "An identifier cannot start with a Unicode character "
-                                    "in the general categories of Nd, Mc, or Me. To portably "
-                                    "do this, first wrap the identifier in vertical lines "
-                                    "like |foo|.")))
+     (unicode-reader-error))
     (t
      (unread-char match stream)
      (read-scheme-symbol stream))))
