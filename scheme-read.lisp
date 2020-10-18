@@ -78,6 +78,12 @@
 (define-function (%negative? :inline t) (character)
   (eql #\- character))
 
+(define-function (make-adjustable-string :inline t) (&optional (length 16))
+  (make-array length
+              :element-type 'character
+              :adjustable t
+              :fill-pointer 0))
+
 ;;; If possible, this generates a NaN of the given type of float; used
 ;;; for +nan.0 and -nan.0
 (defun nan (float-type)
@@ -455,10 +461,7 @@
         :for after-escape? := nil :then escape?
         :for escape? := (and (eql match #\\)
                              (not after-escape?))
-        :with buffer := (make-array 16
-                                    :element-type 'character
-                                    :adjustable t
-                                    :fill-pointer 0)
+        :with buffer := (make-adjustable-string)
         :until (or (not match)
                    (and (not after-escape?)
                         (eql match #\")))
@@ -652,10 +655,7 @@
                               (%invert-case (%one-char-escape c))
                               (%invert-case c))))
         :for escape? := (eql char :escape)
-        :with buffer := (make-array 16
-                                    :element-type 'character
-                                    :adjustable t
-                                    :fill-pointer 0)
+        :with buffer := (make-adjustable-string)
         :while char
         :unless escape?
           :do (vector-push-extend char buffer)
@@ -680,10 +680,7 @@
                                         :adjustable t
                                         :fill-pointer (length prefix)
                                         :initial-contents (map 'string #'%invert-case prefix))
-                            (make-array 16
-                                        :element-type 'character
-                                        :adjustable t
-                                        :fill-pointer 0))
+                            (make-adjustable-string))
         :while char
         :do (vector-push-extend char buffer)
         :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
