@@ -59,11 +59,10 @@
 (defun whitespace-in-u8-error (whitespace?)
   (error-unless whitespace?
                 'scheme-reader-error
-                :details #.(concatenate
-                            'string
-                            "In a strict interpretation of the R7RS-small "
-                            "standard in section 7.1.1, whitespace between #u8 "
-                            "and its parentheses is not permitted.")))
+                :details #.(concatenate 'string
+                                        "In a strict interpretation of the R7RS-small "
+                                        "standard in section 7.1.1, whitespace between #u8 "
+                                        "and its parentheses is not permitted.")))
 
 (defmacro eof-error (details)
   `(error 'scheme-reader-eof-error :details ,details))
@@ -666,7 +665,9 @@
 (defun read-scheme-symbol (stream &key (package *package*) prefix)
   (loop :for char := (read-case (stream c)
                        (#\(
-                        (warn "Style warning: There should be a space before a \"(\" if it is directly following a symbol.")
+                        (warn #.(concatenate 'string
+                                             "Style warning: There should be a space before "
+                                             "a \"(\" if it is directly following a symbol."))
                         (unread-char c stream)
                         nil)
                        ((:or #\" #\Space #\Newline #\) #\; #\Tab)
