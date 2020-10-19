@@ -733,20 +733,23 @@
      (unread-char match stream)
      (read-scheme-symbol stream))))
 
+;;; Handles the #;-style comments for `read-scheme-character'.
+(defun comment-next-form (stream)
+  (let ((skipped-read (read-scheme-character stream)))
+    (case skipped-read
+      (:dot (error 'scheme-reader-error
+                   :details "Attempted to comment out a dot."))
+      (#\) (error 'scheme-reader-error
+                  :details "Expected to skip a token to match a #;-style comment, but none found."))
+      (:eof (eof-error "after a #;-style comment"))))
+  (read-scheme-character stream))
+
 ;;; Wraps around `read-scheme-character*' to handle a few special
 ;;; cases, like #;-style comments.
 (defun read-scheme-character (stream)
   (loop :for match := (let ((match* (read-scheme-character* stream)))
                         (if (eql match* :skip-next)
-                            (progn
-                              (let ((skipped-read (read-scheme-character stream)))
-                                (case skipped-read
-                                  (:dot (error 'scheme-reader-error
-                                               :details "Attempted to comment out a dot."))
-                                  (#\) (error 'scheme-reader-error
-                                              :details "Expected to skip a token to match a #;-style comment, but none found."))
-                                  (:eof (eof-error "after a #;-style comment"))))
-                              (read-scheme-character stream))
+                            (comment-next-form stream)
                             match*))
         :while (eql match :skip)
         :finally (return match)))
