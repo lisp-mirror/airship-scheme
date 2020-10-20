@@ -46,6 +46,8 @@
                      (type-error-datum condition))))
   (:documentation "A type error internal to the Scheme runtime."))
 
+;;; This should come up when an identifier tries to start with an
+;;; invalid Unicode character. This is in section 7.1.1 of r7rs.pdf
 (defun unicode-reader-error ()
   (error 'scheme-reader-error
          :details #.(concatenate 'string
@@ -64,20 +66,25 @@
                                         "standard in section 7.1.1, whitespace between #u8 "
                                         "and its parentheses is not permitted.")))
 
+;;; A simple macro for a simple EOF error.
 (defmacro eof-error (details)
   `(error 'scheme-reader-eof-error :details ,details))
 
 (deftype delimiter ()
+  "Characters, or EOF, that represent a delimiter in Scheme syntax."
   `(member #\Space #\Newline #\( #\) #\; #\" #\Tab :eof))
 
 (define-function (%delimiter? :inline t) (stream)
+  "Tests to see if the next character is a delimiter."
   (let ((char (peek-char nil stream nil :eof)))
     (and (typep char 'delimiter) char)))
 
 (define-function (%negative? :inline t) (character)
+  "Tests to see if the character represents negation."
   (eql #\- character))
 
 (define-function (make-adjustable-string :inline t) (&optional (length 16))
+  "Creates an adjustable string of the given initial length."
   (make-array length
               :element-type 'character
               :adjustable t
@@ -130,6 +137,8 @@
         :do (setf number (+ match (* number radix)))
         :finally (return (values number length))))
 
+;;; Stops when the stream no longer matches the string, returning the
+;;; point where it stopped.
 (define-function (always :inline t) (string stream)
   (let* ((i 0)
          (char nil)
@@ -143,6 +152,7 @@
       (unread-char char stream))
     (values match? (1- i))))
 
+;;; Reads the final character if an NaN or inf candidate.
 (defun %read-final-char (starting-string result exponent-char sign-prefix stream)
   (flet ((read-as-symbol (char)
            (let ((string (make-string 8)))
@@ -172,6 +182,7 @@
                 (aref string 6) exponent-char)
           (read-scheme-symbol stream :prefix string)))))
 
+;;; Reads a NaN candidate, either as a NaN or as an identifier.
 (defun %read-nan (sign-prefix stream)
   (let ((nan "nan.0"))
     (multiple-value-bind (match? index) (always nan stream)
@@ -197,6 +208,8 @@
                    (t (values nil exponent-char)))
                (%read-final-char nan (nan result) exponent-char sign-prefix stream)))))))
 
+;;; Reads an inf candidate, either as a trivial imaginary number, a
+;;; floating point infinity, or as an identifier.
 (defun %read-inf-or-i (sign-prefix stream)
   (let ((negate? (%negative? sign-prefix))
         (inf "inf.0"))
@@ -228,17 +241,21 @@
                        (t (values nil exponent-char)))
                    (%read-final-char inf (inf result negate?) exponent-char sign-prefix stream))))))))
 
+;;; Reads a numeric sign if present.
 (defun %read-sign (stream)
   (case (peek-char nil stream nil :eof)
     (:eof (eof-error "when a number was expected"))
     ((#\+ #\-) (read-char stream))
     (t nil)))
 
+;;; Checks the radix if the number is to be read as a flonum.
 (defun check-flonum-radix (radix)
   (error-unless (= 10 radix)
                 'scheme-reader-error
                 :details "A literal flonum must be in base 10."))
 
+;;; Reads the exponent part of a flonum, after the exponent character
+;;; is read.
 (defun %read-exponent (number radix stream float-type)
   (check-flonum-radix radix)
   (let ((negate? (%negative? (%read-sign stream))))
@@ -251,6 +268,7 @@
                (* number*
                   (if negate? -1 1)))))))
 
+;;; Reads the exponent of a flonum.
 (defun read-exponent (number radix stream)
   (read-case (stream match)
     ((:or #\e #\E #\d #\D)
@@ -264,6 +282,7 @@
     (t (unread-char match stream)
        number)))
 
+;;; Reads a possible suffix for a number.
 (defun %read-scheme-number-suffix (number radix stream)
   (read-case (stream match)
     (#\/
@@ -284,6 +303,7 @@
      (unread-char match stream)
      (read-exponent number radix stream))))
 
+;;; Reads a number that isn't a NaN or infinity.
 (defun %read-regular-scheme-number (radix end? sign-prefix stream)
   (multiple-value-bind (number length) (read-scheme-integer stream radix)
     ;; A leading decimal point implicitly has a 0 in front.
