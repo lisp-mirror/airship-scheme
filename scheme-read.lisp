@@ -184,14 +184,14 @@
 
 ;;; Reads a NaN candidate, either as a NaN or as an identifier.
 (defun %read-nan (sign-prefix stream)
-  (let ((nan "nan.0"))
-    (multiple-value-bind (match? index) (always nan stream)
+  (let ((string "nan.0"))
+    (multiple-value-bind (match? index) (always string stream)
       (cond ((not match?)
              (read-scheme-symbol stream
                                  :prefix (format nil
                                                  "~A~A"
                                                  sign-prefix
-                                                 (subseq nan 0 index))))
+                                                 (subseq string 0 index))))
             ((%delimiter? stream)
              (nan 'double-float))
             (t
@@ -206,23 +206,23 @@
                    ((:or #\s #\S)
                     (values 'short-float exponent-char))
                    (t (values nil exponent-char)))
-               (%read-final-char nan (nan result) exponent-char sign-prefix stream)))))))
+               (%read-final-char string (nan result) exponent-char sign-prefix stream)))))))
 
 ;;; Reads an inf candidate, either as a trivial imaginary number, a
 ;;; floating point infinity, or as an identifier.
 (defun %read-inf-or-i (sign-prefix stream)
   (let ((negate? (%negative? sign-prefix))
-        (inf "inf.0"))
+        (string "inf.0"))
     (read-char stream nil :eof)
     (if (%delimiter? stream)
         (complex 0 (if negate? -1 1))
-        (multiple-value-bind (match? index) (always (subseq inf 1) stream)
+        (multiple-value-bind (match? index) (always (subseq string 1) stream)
           (cond ((not match?)
                  (read-scheme-symbol stream
                                      :prefix (format nil
                                                      "~A~A"
                                                      sign-prefix
-                                                     (subseq inf 0 (1+ index)))))
+                                                     (subseq string 0 (1+ index)))))
                 ((%delimiter? stream)
                  ;; Yes, most of INF's code is unreachable.
                  (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
@@ -239,7 +239,7 @@
                        ((:or #\s #\S)
                         (values 'short-float exponent-char))
                        (t (values nil exponent-char)))
-                   (%read-final-char inf (inf result negate?) exponent-char sign-prefix stream))))))))
+                   (%read-final-char string (inf result negate?) exponent-char sign-prefix stream))))))))
 
 ;;; Reads a numeric sign if present.
 (defun %read-sign (stream)
