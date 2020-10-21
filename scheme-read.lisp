@@ -182,6 +182,19 @@
                 (aref string 6) exponent-char)
           (read-scheme-symbol stream :prefix string)))))
 
+;;; Reads the exponent of a NaN or infinite flonum.
+(defun read-exponent* (stream)
+  (read-case (stream exponent-char)
+    ((:or #\e #\E #\d #\D)
+     (values 'double-float exponent-char))
+    ((:or #\f #\F)
+     (values 'single-float exponent-char))
+    ((:or #\l #\L)
+     (values 'long-float exponent-char))
+    ((:or #\s #\S)
+     (values 'short-float exponent-char))
+    (t (values nil exponent-char))))
+
 ;;; Reads a NaN candidate, either as a NaN or as an identifier.
 (defun %read-nan (sign-prefix stream)
   (let ((string "nan.0"))
@@ -196,16 +209,7 @@
              (nan 'double-float))
             (t
              (multiple-value-bind (result exponent-char)
-                 (read-case (stream exponent-char)
-                   ((:or #\e #\E #\d #\D)
-                    (values 'double-float exponent-char))
-                   ((:or #\f #\F)
-                    (values 'single-float exponent-char))
-                   ((:or #\l #\L)
-                    (values 'long-float exponent-char))
-                   ((:or #\s #\S)
-                    (values 'short-float exponent-char))
-                   (t (values nil exponent-char)))
+                 (read-exponent* stream)
                (%read-final-char string (nan result) exponent-char sign-prefix stream)))))))
 
 ;;; Reads an inf candidate, either as a trivial imaginary number, a
@@ -229,16 +233,7 @@
                    (inf 'double-float negate?)))
                 (t
                  (multiple-value-bind (result exponent-char)
-                     (read-case (stream exponent-char)
-                       ((:or #\e #\E #\d #\D)
-                        (values 'double-float exponent-char))
-                       ((:or #\f #\F)
-                        (values 'single-float exponent-char))
-                       ((:or #\l #\L)
-                        (values 'long-float exponent-char))
-                       ((:or #\s #\S)
-                        (values 'short-float exponent-char))
-                       (t (values nil exponent-char)))
+                     (read-exponent* stream)
                    (%read-final-char string (inf result negate?) exponent-char sign-prefix stream))))))))
 
 ;;; Reads a numeric sign if present.
