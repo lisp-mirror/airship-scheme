@@ -183,7 +183,7 @@
           (read-scheme-symbol stream :prefix string)))))
 
 ;;; Reads the exponent of a NaN or infinite flonum.
-(defun read-exponent* (stream)
+(defun read-exponent* (stream &optional unread-if-no-match?)
   (read-case (stream exponent-char)
     ((:or #\e #\E #\d #\D)
      (values 'double-float exponent-char))
@@ -193,7 +193,10 @@
      (values 'long-float exponent-char))
     ((:or #\s #\S)
      (values 'short-float exponent-char))
-    (t (values nil exponent-char))))
+    (t
+     (when unread-if-no-match?
+       (unread-char exponent-char stream))
+     (values nil exponent-char))))
 
 ;;; Reads a NaN candidate, either as a NaN or as an identifier.
 (defun %read-nan (sign-prefix stream)
@@ -265,17 +268,10 @@
 
 ;;; Reads the exponent of a flonum.
 (defun read-exponent (number radix stream)
-  (read-case (stream match)
-    ((:or #\e #\E #\d #\D)
-     (%read-exponent number radix stream 'double-float))
-    ((:or #\f #\F)
-     (%read-exponent number radix stream 'single-float))
-    ((:or #\l #\L)
-     (%read-exponent number radix stream 'long-float))
-    ((:or #\s #\S)
-     (%read-exponent number radix stream 'short-float))
-    (t (unread-char match stream)
-       number)))
+  (let ((float-type (read-exponent* stream t)))
+    (if float-type
+        (%read-exponent number radix stream float-type)
+        number)))
 
 ;;; Reads a possible suffix for a number.
 (defun %read-scheme-number-suffix (number radix stream)
@@ -290,10 +286,7 @@
      (check-flonum-radix radix)
      (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
        (let ((number (+ number (/ number* (expt 10d0 length*)))))
-         (if (member (peek-char nil stream nil :eof)
-                     '(#\e #\E #\d #\D #\f #\F #\l #\L #\s #\S))
-             (read-exponent number radix stream)
-             number))))
+         (read-exponent number radix stream))))
     (t
      (unread-char match stream)
      (read-exponent number radix stream))))
