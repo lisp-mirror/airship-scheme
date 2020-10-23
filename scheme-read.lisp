@@ -74,10 +74,13 @@
   "Characters, or EOF, that represent a delimiter in Scheme syntax."
   `(member #\Space #\Newline #\( #\) #\; #\" #\Tab :eof))
 
+(define-function (delimiter? :inline t) (character)
+  "Tests to see if the character (or :eof) is a delimiter."
+  (and (typep character 'delimiter) character))
+
 (define-function (%delimiter? :inline t) (stream)
-  "Tests to see if the next character is a delimiter."
-  (let ((char (peek-char nil stream nil :eof)))
-    (and (typep char 'delimiter) char)))
+  "Tests to see if the next character in a stream is a delimiter."
+  (delimiter? (peek-char nil stream nil :eof)))
 
 (define-function (%negative? :inline t) (character)
   "Tests to see if the character represents negation."
@@ -374,7 +377,7 @@
     ;;
     ;; There are also cases that are not numbers, but symbols. Most
     ;; trivially, these are + and -.
-    (cond ((%delimiter? stream)
+    (cond ((delimiter? next-char)
            sign-prefix)
           ((or (eql next-char #\n)
                (eql next-char #\N))
@@ -704,7 +707,7 @@
            (%read-scheme-number stream 10))
           ((not next-char)
            (eof-error "after a dot"))
-          ((%delimiter? stream)
+          ((delimiter? next-char)
            :dot)
           (t
            (unread-char match stream)
