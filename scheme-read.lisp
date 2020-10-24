@@ -476,9 +476,10 @@
                    (and (not after-escape?)
                         (eql match #\")))
         :unless escape?
-          :do (if after-escape?
-                  (vector-push-extend (%one-char-escape match) buffer)
-                  (vector-push-extend match buffer))
+          :do (vector-push-extend (if after-escape?
+                                      (%one-char-escape match)
+                                      match)
+                                  buffer)
         :finally (return (if match
                              (subseq buffer 0 (fill-pointer buffer))
                              (eof-error "inside of a string")))))
@@ -661,9 +662,9 @@
                        (#\| (if after-escape? c nil))
                        (#\\ (if after-escape? c :escape))
                        (:eof (eof-error "inside of a |"))
-                       (t (if after-escape?
-                              (%invert-case (%one-char-escape c))
-                              (%invert-case c))))
+                       (t (%invert-case (if after-escape?
+                                            (%one-char-escape c)
+                                            c))))
         :for escape? := (eql char :escape)
         :with buffer := (make-adjustable-string)
         :while char
