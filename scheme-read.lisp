@@ -286,6 +286,7 @@
                    :details "A fraction needs a denominator after the / sign.")
        (/ number number*)))
     (#\.
+     ;; TODO: Make sure floating point syntax like "1." works here.
      (check-flonum-radix radix)
      (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
        (let ((number (+ number (/ number* (expt 10d0 length*)))))
@@ -326,6 +327,9 @@
                                (error 'scheme-reader-error
                                       :details "Invalid numerical syntax.")))
                           (t
+                           ;; TODO: fixme: Numbers like "4." and "4.1"
+                           ;; are erroring here instead of being read
+                           ;; as floating point.
                            (error 'scheme-reader-error
                                   :details "Invalid numerical syntax.")))))
         ;; In CL terminology, this stream contains "junk" after the
