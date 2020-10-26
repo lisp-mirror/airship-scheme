@@ -329,7 +329,8 @@
                           (t
                            ;; TODO: fixme: Numbers like "4." and "4.1"
                            ;; are erroring here instead of being read
-                           ;; as floating point.
+                           ;; as floating point, but only when top
+                           ;; level.
                            (error 'scheme-reader-error
                                   :details "Invalid numerical syntax.")))))
         ;; In CL terminology, this stream contains "junk" after the
