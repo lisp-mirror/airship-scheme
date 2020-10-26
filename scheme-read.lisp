@@ -291,6 +291,7 @@
      (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
        (let ((number (+ number (/ number* (expt 10d0 length*)))))
          (read-exponent number radix stream))))
+    (:eof number)
     (t
      (unread-char match stream)
      (read-exponent number radix stream))))
