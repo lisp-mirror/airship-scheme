@@ -17,10 +17,10 @@
                               "~:[-~;+~]inf.0~:[~;f0~]"
                               (plusp number)
                               (typep number 'single-float)))
-                     ;; TODO: the NaN sign can be accessed through float-features
                      ((nanp number)
                       (format stream
-                              "+nan.0~:[~;f0~]"
+                              "~:[+~;-~]nan.0~:[~;f0~]"
+                              (sign-bit? number)
                               (typep number 'single-float)))
                      (t
                       (format stream "~A" number)))))

@@ -101,6 +101,10 @@ though. |#
         -inf.0
         +nan.0
         -nan.0
+        +inf.0f0
+        -inf.0f0
+        +nan.0f0
+        -nan.0f0
         -4i
         +3i))
 

@@ -173,6 +173,60 @@ don't end in NIL.
 (define-scheme-type* (output-port?) output-stream-p
   `(satisfies output-stream-p))
 
+;;;; Type creation
+
+;;; TODO: handle short/long float in Lisps that have them (s0, l0)
+(defun sign-bit? (float)
+  "
+Determines if the sign bit is 1 or not, which is used in the creation
+of NaNs.
+"
+  (etypecase float
+    (single-float (logbitp (- (expt 2 5) 1) (f:single-float-bits float)))
+    (double-float (logbitp (- (expt 2 6) 1) (f:double-float-bits float)))))
+
+(defun nan (float-type &optional negate?)
+  "
+If possible, this creates a NaN with the given sign and of the given
+type of float.
+
+This is used for literal NaNs in the Scheme reader.
+"
+  (and float-type
+       (let* ((zero (coerce 0 float-type))
+              (nan (f:with-float-traps-masked t (/ zero zero)))
+              (-nan? (sign-bit? nan)))
+         (if negate?
+             (if -nan? nan (- nan))
+             (if -nan? (- nan) nan)))))
+
+(define-function (inf :inline t) (float-type &optional negate?)
+  "
+If possible, this creates a positive or negative infinity of the given
+type of float.
+
+This is used for literal infinities in the Scheme reader.
+"
+  (declare (optimize (speed 3)))
+  (case float-type
+    (double-float
+     (if negate?
+         f:double-float-negative-infinity
+         f:double-float-positive-infinity))
+    (single-float
+     (if negate?
+         f:single-float-negative-infinity
+         f:single-float-positive-infinity))
+    (long-float
+     (if negate?
+         f:long-float-negative-infinity
+         f:long-float-positive-infinity))
+    (short-float
+     (if negate?
+         f:short-float-negative-infinity
+         f:short-float-positive-infinity))
+    (t nil)))
+
 ;;;; Type Conversion
 
 (define-function (inexact :inline t) ((z number))

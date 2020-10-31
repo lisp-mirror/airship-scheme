@@ -93,36 +93,6 @@
               :adjustable t
               :fill-pointer 0))
 
-;;; If possible, this generates a NaN of the given type of float; used
-;;; for +nan.0 and -nan.0
-(defun nan (float-type)
-  (and float-type
-       (let ((zero (coerce 0 float-type)))
-         (f:with-float-traps-masked t (/ zero zero)))))
-
-;;; If possible, this retrieves a positive or negative infinity of the
-;;; given type of float; used for +inf.0 and -inf.0
-(define-function (inf :inline t) (float-type &optional negate?)
-  (declare (optimize (speed 3)))
-  (case float-type
-    (double-float
-     (if negate?
-         f:double-float-negative-infinity
-         f:double-float-positive-infinity))
-    (single-float
-     (if negate?
-         f:single-float-negative-infinity
-         f:single-float-positive-infinity))
-    (long-float
-     (if negate?
-         f:long-float-negative-infinity
-         f:long-float-positive-infinity))
-    (short-float
-     (if negate?
-         f:short-float-negative-infinity
-         f:short-float-positive-infinity))
-    (t nil)))
-
 ;;; Reads an integer of the given radix
 (defun read-scheme-integer (stream &optional (radix 10))
   (check-type radix (integer 2 16))
@@ -211,7 +181,8 @@
 
 ;;; Reads a NaN candidate, either as a NaN or as an identifier.
 (defun %read-nan (sign-prefix stream)
-  (let ((string "nan.0"))
+  (let ((negate? (%negative? sign-prefix))
+        (string "nan.0"))
     (multiple-value-bind (match? index) (always string stream)
       (cond ((not match?)
              (read-scheme-symbol stream
@@ -220,11 +191,11 @@
                                                  sign-prefix
                                                  (subseq string 0 index))))
             ((%delimiter? stream)
-             (nan 'double-float))
+             (nan 'double-float negate?))
             (t
              (multiple-value-bind (result exponent-char)
                  (read-exponent* stream)
-               (%read-final-char string (nan result) exponent-char sign-prefix stream)))))))
+               (%read-final-char string (nan result negate?) exponent-char sign-prefix stream)))))))
 
 ;;; Reads an inf candidate, either as a trivial imaginary number, a
 ;;; floating point infinity, or as an identifier.
