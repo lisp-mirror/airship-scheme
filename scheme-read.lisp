@@ -756,11 +756,10 @@
                       ((not recursive?)
                        (error 'scheme-reader-error
                               :details "The dotted list syntax must be used inside of a list"))
-                      (s-expression
-                       t)
-                      (t
+                      ((not s-expression)
                        (error 'scheme-reader-error
-                              :details "An expression needs an item before the dot in a dotted list")))))
+                              :details "An expression needs an item before the dot in a dotted list"))
+                      (t t))))
          (end-of-read? (match)
            (or (and recursive?
                     (eql match #\)))
