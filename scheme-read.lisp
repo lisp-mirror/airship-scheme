@@ -90,15 +90,6 @@
   "Tests to see if the character represents negation."
   (eql #\- character))
 
-;;;; Helper functions
-
-(define-function (make-adjustable-string :inline t) (&optional (length 16))
-  "Creates an adjustable string of the given initial length."
-  (make-array length
-              :element-type 'character
-              :adjustable t
-              :fill-pointer 0))
-
 ;;;; Numbers
 
 ;;; Reads an integer of the given radix
