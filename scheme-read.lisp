@@ -12,6 +12,8 @@
 
 (cl:in-package #:airship-scheme)
 
+;;;; Conditions
+
 (define-condition scheme-reader-error (error)
   ((%details
     :initarg :details
@@ -70,6 +72,8 @@
 (defmacro eof-error (details)
   `(error 'scheme-reader-eof-error :details ,details))
 
+;;;; Common characters
+
 (deftype delimiter ()
   "Characters, or EOF, that represent a delimiter in Scheme syntax."
   `(member #\Space #\Newline #\( #\) #\; #\" #\Tab :eof))
@@ -86,12 +90,16 @@
   "Tests to see if the character represents negation."
   (eql #\- character))
 
+;;;; Helper functions
+
 (define-function (make-adjustable-string :inline t) (&optional (length 16))
   "Creates an adjustable string of the given initial length."
   (make-array length
               :element-type 'character
               :adjustable t
               :fill-pointer 0))
+
+;;;; Numbers
 
 ;;; Reads an integer of the given radix
 (defun read-scheme-integer (stream &optional (radix 10))
@@ -398,6 +406,8 @@
     (handler-case (read-scheme-number in radix t)
       (scheme-reader-error nil))))
 
+;;;; Misc reader syntax
+
 ;;; A line comment skips the rest of the stream unless there is a
 ;;; newline that ends the comment..
 (defun read-line-comment (stream)
@@ -678,6 +688,8 @@
         :do (vector-push-extend char buffer)
         :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
                                  package))))
+
+;;;; Core syntax
 
 ;;; A dot can represent a possible number (if not, it's a symbol), a
 ;;; part of a dotted list, or the start of a symbol.
