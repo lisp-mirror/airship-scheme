@@ -6,6 +6,11 @@
   (:documentation "A package that the core R7RS symbols are read into.")
   (:use))
 
+(defpackage #:%scheme-thunk
+  (:documentation "A package to namespace the internal Scheme thunk.")
+  (:use)
+  (:export #:thunk))
+
 (defun generate-lambda-list (list)
   "Generates a lambda list for `define-scheme-procedure'"
   (typecase list
@@ -157,9 +162,8 @@ Common Lisp or #t if the result is printed as Scheme.
 ;;; (let ((x 2) (y 3))
 ;;;   (with-cps-transform #'identity (r7rs::+ (r7rs::* x x) y)))
 (defmacro with-cps-transform (expression)
+  "Applies a continuation passing style transform to the expression."
   (cps-transform expression))
-
-(defpackage #:%scheme-thunk (:use) (:export #:thunk))
 
 (define-function (thunk? :inline t) (object)
   "Determines if an object is a thunk."

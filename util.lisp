@@ -32,6 +32,10 @@ the NIL that CL expects to be the false value.
 ;;; If the assumption is false in the major CL implementations, then
 ;;; more complicated logic would need to be done.
 (define-function (%invert-case :inline t :return character) ((character character))
+  "
+Inverts the case of a character in a CL-compatible way rather than in
+a Unicode-proper way.
+"
   (cond ((upper-case-p character) (char-downcase character))
         ((lower-case-p character) (char-upcase character))
         (t character)))
