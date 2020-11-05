@@ -358,15 +358,12 @@
     ;; trivially, these are + and -.
     (cond ((delimiter? next-char)
            sign-prefix)
-          ((or (eql next-char #\n)
-               (eql next-char #\N))
+          ((char-equal next-char #\n)
            (%read-nan sign-prefix stream))
-          ((or (eql next-char #\i)
-               (eql next-char #\I))
+          ((char-equal next-char #\i)
            (%read-inf-or-i sign-prefix stream))
-          ((and next-char
-                (or (digit-char-p next-char radix)
-                    (eql next-char #\.)))
+          ((or (digit-char-p next-char radix)
+               (eql next-char #\.))
            (%read-regular-scheme-number radix end? sign-prefix stream))
           ;; For symbols that begin with + or -, such as CL-style
           ;; constant names, e.g. +foo+
