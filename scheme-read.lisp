@@ -325,13 +325,6 @@
 ;;; infnan) except the #foo portion of the syntax, which is the
 ;;; prefix and must come first, before the complex.
 ;;;
-;;; TODO: +inf.0+inf.0i
-;;; TODO: 4-inf.0i
-;;; TODO: +inf.0-3i
-;;; TODO: +inf.0i
-;;; TODO: -1+4i
-;;; TODO: 4@5
-;;;
 ;;; TODO:
 ;;;
 ;;; That is, all of the currently supported numbers can end in one of:
