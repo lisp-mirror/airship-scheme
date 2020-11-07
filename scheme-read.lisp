@@ -297,7 +297,8 @@
       ;; of a number, such as .1foo
       (let ((number (cond (delimiter?
                            number)
-                          ((eql #\i (peek-char nil stream nil :eof))
+                          ((let ((next-char (peek-char nil stream nil :eof)))
+                             (and (characterp next-char) (char-equal #\i next-char)))
                            (read-char stream nil :eof)
                            (setf delimiter? (%delimiter? stream))
                            (if (and sign-prefix delimiter?)
