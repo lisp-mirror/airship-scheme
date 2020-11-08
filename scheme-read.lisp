@@ -677,11 +677,11 @@
 ;;; part of a dotted list, or the start of a symbol.
 (defun read-scheme-dot (match stream)
   (let ((next-char (peek-char nil stream nil nil)))
-    (cond ((and next-char (digit-char-p next-char))
+    (cond ((not next-char)
+           (eof-error "after a dot"))
+          ((digit-char-p next-char)
            (unread-char match stream)
            (%read-scheme-number stream 10))
-          ((not next-char)
-           (eof-error "after a dot"))
           ((delimiter? next-char)
            :dot)
           (t
