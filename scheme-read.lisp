@@ -90,6 +90,10 @@
   "Tests to see if the character represents negation."
   (eql #\- character))
 
+(define-function (%sign :inline t) (character)
+  "Returns -1 if the character represents negation; otherwise, 1."
+  (if (%negative? character) -1 1))
+
 ;;;; Numbers
 
 ;;; Reads an integer of the given radix
@@ -237,15 +241,13 @@
 ;;; is read.
 (defun %read-exponent (number radix stream float-type)
   (check-flonum-radix radix)
-  (let ((negate? (%negative? (%read-sign stream))))
+  (let ((sign (%sign (%read-sign stream))))
     (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
       (error-when (zerop length*)
                   'scheme-reader-error
                   :details "An exponent was expected but none was provided")
       (* (coerce number float-type)
-         (expt 10
-               (* number*
-                  (if negate? -1 1)))))))
+         (expt 10 (* number* sign))))))
 
 ;;; Reads the exponent of a flonum.
 (defun read-exponent (number radix stream)
@@ -289,7 +291,7 @@
                       number
                       (%read-scheme-number-suffix number radix stream)))
           (delimiter? (%delimiter? stream))
-          (negate? (%negative? sign-prefix)))
+          (sign (%sign sign-prefix)))
       ;; Note: Instead of an error, this failed candidate
       ;; of a number could be read as a symbol, like in CL
       ;; and Racket. This is potentially still valid as a
@@ -313,7 +315,7 @@
         (error-when (and end? (not (eql delimiter? :eof)))
                     'scheme-reader-error
                     :details "Expected an EOF after reading the number.")
-        (* number (if negate? -1 1))))))
+        (* number sign)))))
 
 ;;; Reads a Scheme number in the given radix. If end? then it must be
 ;;; the end of the stream after reading the number.
