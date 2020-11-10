@@ -557,6 +557,14 @@
      (error 'scheme-reader-error
             :details (format nil "Reader syntax #~A is not supported!" x)))))
 
+(defun %read-bytevector* (stream)
+  (handler-case (coerce (scheme-read stream :recursive? t) 'bytevector?)
+    (type-error (c)
+      (error 'scheme-type-error
+             :details "in reading a bytevector"
+             :datum (type-error-datum c)
+             :expected-type 'octet))))
+
 ;;; Arbitrary whitespace between #u8 and its parentheses is not
 ;;; required to be supported.
 ;;;
@@ -583,14 +591,7 @@
                            (t (error 'scheme-reader-error
                                      :details (format nil "\"(\" expected, but ~A was read." c))))
                :until c
-               :finally
-                  (return
-                    (handler-case (coerce (scheme-read stream :recursive? t) 'bytevector?)
-                      (type-error (c)
-                        (error 'scheme-type-error
-                               :details "in reading a bytevector"
-                               :datum (type-error-datum c)
-                               :expected-type 'octet))))))
+               :finally (return (%read-bytevector* stream))))
     (:eof (eof-error "after #u when an 8 was expected"))
     (t (error 'scheme-reader-error
               :details (format nil "#u8 expected, but #u~A was read." character)))))
