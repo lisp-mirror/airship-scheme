@@ -183,6 +183,10 @@
      (values nil exponent-char))))
 
 ;;; Reads a NaN candidate, either as a NaN or as an identifier.
+;;;
+;;; As an extension, the exponentiation suffix is permitted (with 0 as
+;;; the only allowed exponent) as a way to get a NaN of a different
+;;; floating point type.
 (defun %read-nan (sign-prefix stream)
   (let ((negate? (%negative? sign-prefix))
         (string "nan.0"))
@@ -202,6 +206,10 @@
 
 ;;; Reads an inf candidate, either as a trivial imaginary number, a
 ;;; floating point infinity, or as an identifier.
+;;;
+;;; As an extension, the exponentiation suffix is permitted (with 0 as
+;;; the only allowed exponent) as a way to get an infinity of a
+;;; different floating point type.
 (defun %read-inf-or-i (sign-prefix stream)
   (let ((negate? (%negative? sign-prefix))
         (string "inf.0"))
@@ -344,27 +352,28 @@
 (defun %read-scheme-number (stream radix &optional end?)
   (let* ((sign-prefix (%read-sign stream))
          (next-char (peek-char nil stream nil :eof)))
-    ;; The special cases, which can only happen if there's a sign
-    ;; prefix, are inf.0, nan.0, or i. As an extension, the extended
-    ;; exponentiation suffix is permitted (with 0 as the only
-    ;; allowed exponent) as a way to get an infinity or NaN of a
-    ;; different floating point type.
-    ;;
-    ;; There are also cases that are not numbers, but symbols. Most
-    ;; trivially, these are + and -.
+    ;; This COND tests for the various syntactic special cases as well
+    ;; as the regular syntax for numbers.
     (cond ((delimiter? next-char)
            sign-prefix)
-          ((char-equal next-char #\n)
+          ;; Either nan or a symbol
+          ((and sign-prefix (char-equal next-char #\n))
            (%read-nan sign-prefix stream))
-          ((char-equal next-char #\i)
+          ;; Either +i, -i, an inf, or a symbol
+          ((and sign-prefix (char-equal next-char #\i))
            (%read-inf-or-i sign-prefix stream))
+          ;; A regular number starts with a digit or .
           ((or (digit-char-p next-char radix)
                (eql next-char #\.))
            (%read-regular-scheme-number radix end? sign-prefix stream))
           ;; For symbols that begin with + or -, such as CL-style
-          ;; constant names, e.g. +foo+
+          ;; constant names, e.g. +foo+, excluding + or - themselves
+          ;; (the first case in the COND).
           (sign-prefix
            (read-scheme-symbol stream :prefix (make-string 1 :initial-element sign-prefix)))
+          ;; Everything else is an error here. This won't error on
+          ;; e.g. "inf" or "nan" without the prefix because those
+          ;; should be read as a symbol, not as a potential number.
           (t
            (error 'scheme-reader-error
                   :details (format nil
