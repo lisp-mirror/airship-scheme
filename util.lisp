@@ -72,3 +72,7 @@ in a form that CL expects.
   (if start
       (subseq sequence start end)
       (copy-seq sequence)))
+
+(define-function (skip-read-char :inline t) (stream)
+  "Call this when the result is to be ignored."
+  (read-char stream nil nil t))

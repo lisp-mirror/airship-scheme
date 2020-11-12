@@ -213,7 +213,7 @@
 (defun %read-inf-or-i (sign-prefix stream)
   (let ((negate? (%negative? sign-prefix))
         (string "inf.0"))
-    (read-char stream nil :eof)
+    (skip-read-char stream)
     (if (%delimiter? stream)
         (complex 0 (if negate? -1 1))
         (multiple-value-bind (match? index) (always (subseq string 1) stream)
@@ -309,7 +309,7 @@
                            number)
                           ((let ((next-char (peek-char nil stream nil :eof)))
                              (and (characterp next-char) (char-equal #\i next-char)))
-                           (read-char stream nil :eof)
+                           (skip-read-char stream)
                            (setf delimiter? (%delimiter? stream))
                            (if (and sign-prefix delimiter?)
                                (complex 0 number)
@@ -385,7 +385,7 @@
   (let* ((next-char (peek-char nil stream nil :eof))
          (possible-number (if (eql next-char #\#)
                               (progn
-                                (read-char stream nil :eof)
+                                (skip-read-char stream)
                                 (%read-special stream radix))
                               (%read-scheme-number stream radix end?))))
     (if (numberp possible-number)
@@ -473,7 +473,7 @@
   (let ((next-char (peek-char nil stream nil :eof)))
     (case next-char
       (#\#
-       (read-char stream nil nil t)
+       (skip-read-char stream)
        (read-case (stream match)
          ((:or #\b #\B) 2)
          ((:or #\o #\O) 8)
@@ -493,7 +493,7 @@
   (let* ((next-char (peek-char nil stream nil :eof))
          (exactness (case next-char
                       (#\#
-                       (read-char stream nil nil t)
+                       (skip-read-char stream)
                        (read-case (stream match)
                          ((:or #\e #\E) #'exact)
                          ((:or #\i #\I) #'inexact)
@@ -716,7 +716,7 @@
     (#\` :quasiquote)
     (#\, (if (eql #\@ (peek-char nil stream nil :eof))
              (progn
-               (read-char stream)
+               (skip-read-char stream)
                :unquote-splicing)
              :unquote))
     (#\; (read-line-comment stream))
