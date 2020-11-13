@@ -142,22 +142,20 @@
                (setf (aref string 0) sign-prefix
                      (aref string (- string-length* 2)) exponent-char
                      (aref string (- string-length* 1)) char)
-               (read-scheme-symbol stream :prefix string))))
+               (read-scheme-symbol stream :prefix string)))
+           ;; If there's nothing afterwards, then this shortcut can be
+           ;; taken in creating the symbol.
+           (read-as-symbol* (sign-prefix starting-string exponent-char)
+             (intern (map 'string
+                          #'%invert-case
+                          (format nil "~A~A~A" sign-prefix starting-string exponent-char)))))
       (if result
           (read-case (stream char)
             (#\0 (if (%delimiter? stream)
                      result
                      (read-as-symbol char)))
-            (:eof
-             (intern (map 'string
-                          #'%invert-case
-                          (format nil
-                                  "~A~A~A"
-                                  sign-prefix
-                                  starting-string
-                                  exponent-char))))
-            (t
-             (read-as-symbol char)))
+            (:eof (read-as-symbol* sign-prefix starting-string exponent-char))
+            (t (read-as-symbol char)))
           (let* ((string-length* (+ 2 string-length))
                  (string (make-string string-length*)))
             (replace string starting-string :start1 1)
