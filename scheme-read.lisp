@@ -276,6 +276,15 @@
      (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
        (let ((number (+ number (/ number* (expt 10d0 length*)))))
          (read-exponent number radix stream))))
+    ;; TODO: Permit non-integers in this format.
+    (#\@
+     (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+       (error-when (zerop length*)
+                   'scheme-reader-error
+                   :details "Invalid syntax in a polar notation complex number literal.")
+       ;; TODO: Only coerce to double-float if both are integers.
+       ;; Non-integers can also be in this format.
+       (* (double-float* number) (cis (double-float* number*)))))
     (:eof number)
     (t
      (unread-char match stream)
@@ -327,8 +336,6 @@
 ;;; the end of the stream after reading the number.
 ;;;
 ;;; TODO: complex via ({NUMBER} +/- {NUMBER} i)
-;;;
-;;; TODO: complex via {real} @ {real}
 ;;;
 ;;; TODO: complex can support any number on either side (including
 ;;; infnan) except the #foo portion of the syntax, which is the
