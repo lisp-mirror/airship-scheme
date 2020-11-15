@@ -276,15 +276,6 @@
      (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
        (let ((number (+ number (/ number* (expt 10d0 length*)))))
          (read-exponent number radix stream))))
-    ;; TODO: Permit non-integers in this format.
-    (#\@
-     (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-       (error-when (zerop length*)
-                   'scheme-reader-error
-                   :details "Invalid syntax in a polar notation complex number literal.")
-       ;; TODO: Only coerce to double-float if both are integers.
-       ;; Non-integers can also be in this format.
-       (* (double-float* number) (cis (double-float* number*)))))
     (:eof number)
     (t
      (unread-char match stream)
@@ -312,19 +303,30 @@
       ;; and Racket. This is potentially still valid as a
       ;; symbol in R7RS-small if it began with a . instead
       ;; of a number, such as .1foo
-      (let ((number (cond (delimiter?
-                           number)
-                          ((let ((next-char (peek-char nil stream nil :eof)))
-                             (and (characterp next-char) (char-equal #\i next-char)))
-                           (skip-read-char stream)
-                           (setf delimiter? (%delimiter? stream))
-                           (if (and sign-prefix delimiter?)
-                               (complex 0 number)
-                               (error 'scheme-reader-error
-                                      :details "Invalid numerical syntax.")))
-                          (t
-                           (error 'scheme-reader-error
-                                  :details "Invalid numerical syntax.")))))
+      (let* ((next-char (peek-char nil stream nil :eof))
+             (number (cond (delimiter?
+                            number)
+                           ((and (characterp next-char) (char-equal #\i next-char))
+                            (skip-read-char stream)
+                            (setf delimiter? (%delimiter? stream))
+                            (if (and sign-prefix delimiter?)
+                                (complex 0 number)
+                                (error 'scheme-reader-error
+                                       :details "Invalid numerical syntax.")))
+                           ((and (characterp next-char) (char= #\@ next-char))
+                            (skip-read-char stream)
+                            (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                              (error-when (zerop length*)
+                                          'scheme-reader-error
+                                          :details "Invalid syntax in a polar notation complex number literal.")
+                              (let ((number* (if (%delimiter? stream)
+                                                 number*
+                                                 (%read-scheme-number-suffix number* radix stream))))
+                                (* (if (rationalp number) (double-float* number) number)
+                                   (cis (if (rationalp number) (double-float* number*) number*))))))
+                           (t
+                            (error 'scheme-reader-error
+                                   :details "Invalid numerical syntax.")))))
         ;; In CL terminology, this stream contains "junk" after the
         ;; number.
         (error-when (and end? (not (eql delimiter? :eof)))
@@ -345,15 +347,12 @@
 ;;;
 ;;; That is, all of the currently supported numbers can end in one of:
 ;;;
-;;;   i @ + -
-;;;
-;;; If it ends in i then it must be followed by a delimiter.
+;;; + -
 ;;;
 ;;; If it ends in + or - then it must end in another number, which
 ;;; must then end in i and then a delimiter.
 ;;;
-;;; If it ends in @ then it must end in another number, which must end
-;;; in a delimiter.
+;;; TODO: should syntax like +inf.0@-inf.0 be supported?
 (defun %read-scheme-number (stream radix &optional end?)
   (let* ((sign-prefix (%read-sign stream))
          (next-char (peek-char nil stream nil :eof)))
