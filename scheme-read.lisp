@@ -303,30 +303,31 @@
       ;; and Racket. This is potentially still valid as a
       ;; symbol in R7RS-small if it began with a . instead
       ;; of a number, such as .1foo
-      (let* ((next-char (peek-char nil stream nil :eof))
-             (number (cond (delimiter?
-                            number)
-                           ((and (characterp next-char) (char-equal #\i next-char))
-                            (skip-read-char stream)
-                            (setf delimiter? (%delimiter? stream))
-                            (if (and sign-prefix delimiter?)
-                                (complex 0 number)
-                                (error 'scheme-reader-error
-                                       :details "Invalid numerical syntax.")))
-                           ((and (characterp next-char) (char= #\@ next-char))
-                            (skip-read-char stream)
-                            (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                              (error-when (zerop length*)
-                                          'scheme-reader-error
-                                          :details "Invalid syntax in a polar notation complex number literal.")
-                              (let ((number* (if (%delimiter? stream)
-                                                 number*
-                                                 (%read-scheme-number-suffix number* radix stream))))
-                                (* (if (rationalp number) (double-float* number) number)
-                                   (cis (if (rationalp number) (double-float* number*) number*))))))
-                           (t
-                            (error 'scheme-reader-error
-                                   :details "Invalid numerical syntax.")))))
+      ;;
+      ;; TODO: Properly apply negation to everything here.
+      (let ((number (if delimiter?
+                        number
+                        (read-case (stream match)
+                          ((:or #\i #\I)
+                           (setf delimiter? (%delimiter? stream))
+                           (if (and sign-prefix delimiter?)
+                               (complex 0 number)
+                               (error 'scheme-reader-error
+                                      :details "Invalid numerical syntax.")))
+                          (#\@
+                           (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
+                             (error-when (zerop length*)
+                                         'scheme-reader-error
+                                         :details "Invalid syntax in a polar notation complex number literal.")
+                             ;; TODO: Allow the second part of an @ to be negative.
+                             (let ((number* (if (%delimiter? stream)
+                                                number*
+                                                (%read-scheme-number-suffix number* radix stream))))
+                               (* (if (rationalp number) (double-float* number) number)
+                                  (cis (if (rationalp number) (double-float* number*) number*))))))
+                          (t
+                           (error 'scheme-reader-error
+                                  :details "Invalid numerical syntax."))))))
         ;; In CL terminology, this stream contains "junk" after the
         ;; number.
         (error-when (and end? (not (eql delimiter? :eof)))
