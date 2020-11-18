@@ -282,7 +282,7 @@
      (read-exponent number radix stream))))
 
 ;;; Reads a number that isn't a NaN or infinity.
-(defun %read-regular-scheme-number (radix end? sign-prefix stream)
+(defun %read-regular-scheme-number (radix sign-prefix stream)
   (multiple-value-bind (number length) (read-scheme-integer stream radix)
     ;; A leading decimal point implicitly has a 0 in front.
     ;; Otherwise, no number at the start is an error.
@@ -297,90 +297,107 @@
            (number (* sign
                       (if (%delimiter? stream)
                           number
-                          (%read-scheme-number-suffix number radix stream))))
-           (delimiter? (%delimiter? stream)))
-      ;; Note: Instead of an error, this failed candidate
-      ;; of a number could be read as a symbol, like in CL
-      ;; and Racket. This is potentially still valid as a
-      ;; symbol in R7RS-small if it began with a . instead
-      ;; of a number, such as .1foo
-      (multiple-value-bind (number delimiter?)
-          (if delimiter?
-              (values number t)
-              (values
-               (read-case (stream match)
-                 ((:or #\i #\I)
-                  (values
-                   (if (and sign-prefix (%delimiter? stream))
-                       (complex 0 number)
-                       (error 'scheme-reader-error
-                              :details "Invalid numerical syntax."))))
-                 (#\@
-                  ;; TODO: Allow the second part of an @ to start with
-                  ;; a + or -. This could be achieved by moving this
-                  ;; to %read-scheme-number, reading the sign-prefix,
-                  ;; and then treating things normally.
-                  (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-                    (error-when (zerop length*)
-                                'scheme-reader-error
-                                :details "Invalid syntax in a polar notation complex number literal.")
-                    (let ((number* (if (%delimiter? stream)
-                                       number*
-                                       (%read-scheme-number-suffix number* radix stream))))
-                      (* (if (rationalp number) (double-float* number) number)
-                         (cis (if (rationalp number) (double-float* number*) number*))))))
-                 ;; TODO: add + or -, which must then end in i followed by a delimiter
-                 ;; ((:or #\+ #\-))
-                 (t
-                  (error 'scheme-reader-error
-                         :details "Invalid numerical syntax.")))
-               (%delimiter? stream)))
-        ;; In CL terminology, this stream contains "junk" after the
-        ;; number.
-        (error-when (and end? (not (eql delimiter? :eof)))
-                    'scheme-reader-error
-                    :details "Expected an EOF after reading the number.")
-        number))))
+                          (%read-scheme-number-suffix number radix stream)))))
+      number)))
 
 ;;; Reads a Scheme number in the given radix. If end? then it must be
 ;;; the end of the stream after reading the number.
 ;;;
-;;; TODO: Pull the read-case out of %read-regular-scheme-number so i,
-;;; @, etc., can be used with inf/nan
+;;; TODO: Allow inf/nan/etc. to be used with the imaginary numbers,
+;;; including potentially ending in i in either the first-part (with
+;;; no second part) or the second-part (unless @ produces the second
+;;; part).
 ;;;
 ;;; TODO: Take into account when #e or #x or so on are used when
-;;; creating a symbol instead of a number. If #e or #x are used, then
-;;; a symbol can't be created.
+;;; creating a symbol instead of a number. If #e or #x etc. are used,
+;;; then a symbol can't be created.
+;;;
+;;; Note: Instead of an error, this failed candidate of a number could
+;;; be read as a symbol, like in CL and Racket. This is potentially
+;;; still valid as a symbol in R7RS-small if it began with a . instead
+;;; of a number, such as .1foo
 (defun %read-scheme-number (stream radix &optional end?)
-  (let* ((sign-prefix (%read-sign stream))
-         (next-char (peek-char nil stream nil :eof)))
-    ;; This COND tests for the various syntactic special cases as well
-    ;; as the regular syntax for numbers.
-    (cond ((delimiter? next-char)
-           sign-prefix)
-          ;; Either nan or a symbol
-          ((and sign-prefix (char-equal next-char #\n))
-           (%read-nan sign-prefix stream))
-          ;; Either +i, -i, an inf, or a symbol
-          ((and sign-prefix (char-equal next-char #\i))
-           (%read-inf-or-i sign-prefix stream))
-          ;; A regular number starts with a digit or .
-          ((or (digit-char-p next-char radix)
-               (eql next-char #\.))
-           (%read-regular-scheme-number radix end? sign-prefix stream))
-          ;; For symbols that begin with + or -, such as CL-style
-          ;; constant names, e.g. +foo+, excluding + or - themselves
-          ;; (the first case in the COND).
-          (sign-prefix
-           (read-scheme-symbol stream :prefix (make-string 1 :initial-element sign-prefix)))
-          ;; Everything else is an error here. This won't error on
-          ;; e.g. "inf" or "nan" without the prefix because those
-          ;; should be read as a symbol, not as a potential number.
-          (t
-           (error 'scheme-reader-error
-                  :details (format nil
-                                   "Failure to read a number when reading ~A"
-                                   next-char))))))
+  ;; A complex number has two different ways to have a second part:
+  ;;
+  ;;   {first}+{second}i or {first}-{second}i
+  ;;   {first}@{second}
+  (flet ((first-part (sign-prefix stream)
+           (let ((next-char (peek-char nil stream nil :eof)))
+             (cond ((delimiter? next-char)
+                    sign-prefix)
+                   ;; Either nan or a symbol
+                   ((and sign-prefix (char-equal next-char #\n))
+                    (%read-nan sign-prefix stream))
+                   ;; Either +i, -i, an inf, or a symbol
+                   ((and sign-prefix (char-equal next-char #\i))
+                    (%read-inf-or-i sign-prefix stream))
+                   ;; A regular number starts with a digit or .
+                   ((or (digit-char-p next-char radix)
+                        (eql next-char #\.))
+                    (%read-regular-scheme-number radix sign-prefix stream))
+                   ;; For symbols that begin with + or -, such as
+                   ;; CL-style constant names, e.g. +foo+, excluding +
+                   ;; or - themselves (the first case in the COND).
+                   (sign-prefix
+                    (read-scheme-symbol stream :prefix (make-string 1 :initial-element sign-prefix)))
+                   ;; Everything else is an error here.
+                   ;;
+                   ;; Note: This won't error on e.g. "inf" or "nan"
+                   ;; without the prefix because those should be read
+                   ;; as a symbol, not as a potential number.
+                   (t
+                    (error 'scheme-reader-error
+                           :details (format nil
+                                            "Failure to read a number when reading ~A"
+                                            next-char))))))
+         ;; Note: Ending in a delimiter means there is no second part.
+         ;; Ending in an #\i means that the "first" part was really
+         ;; the second part.
+         (second-part (number sign-prefix delimiter? stream)
+           (multiple-value-bind (number delimiter?)
+               (if delimiter?
+                   (values number t)
+                   (values
+                    (read-case (stream match)
+                      ((:or #\i #\I)
+                       ;; Note: Removing this check would be a
+                       ;; reasonable syntax extension over the
+                       ;; standard.
+                       (error-unless (and sign-prefix (%delimiter? stream))
+                                     'scheme-reader-error
+                                     :details "Invalid numerical syntax.")
+                       (complex 0 number))
+                      (#\@
+                       (let* ((sign-prefix* (%read-sign stream))
+                              (number* (%read-regular-scheme-number radix sign-prefix* stream)))
+                         (* (if (rationalp number) (double-float* number) number)
+                            (cis (if (rationalp number) (double-float* number*) number*)))))
+                      ((:or #\+ #\-)
+                       (let* ((sign-prefix* match)
+                              (number* (%read-regular-scheme-number radix sign-prefix* stream)))
+                         (read-case (stream match)
+                           ((:or #\i #\I)
+                            (complex number number*))
+                           (t (error 'scheme-reader-error
+                                     :details "Invalid numerical syntax.")))))
+                      (t
+                       (error 'scheme-reader-error
+                              :details "Invalid numerical syntax.")))
+                    (%delimiter? stream)))
+             ;; In CL terminology, this stream contains "junk" after
+             ;; the number.
+             (error-when (and end? (not (eql delimiter? :eof)))
+                         'scheme-reader-error
+                         :details "Expected an EOF after reading the number.")
+             number)))
+    ;; Remember the original sign-prefix. Process the first part and
+    ;; then if necessary, the second part.
+    ;;
+    ;; Note: These aren't necessarily the real and imaginary part.
+    (let ((sign-prefix (%read-sign stream)))
+      (second-part (first-part sign-prefix stream)
+                   sign-prefix
+                   (%delimiter? stream) stream))))
 
 ;;; Reads a number for the Scheme reader or string-to-number.
 (defun read-scheme-number (stream &optional (radix 10) end?)

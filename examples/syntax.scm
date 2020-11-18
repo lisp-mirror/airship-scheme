@@ -107,16 +107,21 @@ though. |#
         -nan.0f0
         -4i
         +3i
-        ;; TODO: Implement the syntax below this line
-        +inf.0+inf.0i
-        +inf.0-nan.0i
-        +nan.0+inf.0i
-        4-inf.0i
-        +inf.0-3i
-        -nan.0+42i
-        +inf.0i
+        ;; +inf.0+inf.0i
+        ;; +inf.0-nan.0i
+        ;; +nan.0+inf.0i
+        ;; 4-inf.0i
+        ;; +inf.0-3i
+        ;; -nan.0+42i
+        ;; +inf.0i
+        4/3-3/4i
+        3e4-4e4i
+        -4.0f30+3.0f20i
         -1+4i
-        4@5))
+        +4-3i
+        3+2i
+        4@5
+        -3.0@+4e3))
 
 ;;;; TODO: The rest of the syntax will be demonstrated here, but this
 ;;;; file is currently incomplete.
