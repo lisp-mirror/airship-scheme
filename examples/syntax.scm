@@ -121,7 +121,14 @@ though. |#
         +4-3i
         3+2i
         4@5
-        -3.0@+4e3))
+        -3.0@+4e3
+        4@+inf.0
+        -7@-nan.0
+        ;; +inf.0@-3
+        ;; +nan.0@42
+        ;; +inf.0@-inf.0
+        ;; -nan.0@+nan.0
+        ))
 
 ;;;; TODO: The rest of the syntax will be demonstrated here, but this
 ;;;; file is currently incomplete.
