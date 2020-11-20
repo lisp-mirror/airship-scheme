@@ -113,7 +113,10 @@ though. |#
         ;; 4-inf.0i
         ;; +inf.0-3i
         ;; -nan.0+42i
-        ;; +inf.0i
+        +inf.0i
+        -inf.0f0i
+        -nan.0i
+        +nan.0d0i
         4/3-3/4i
         3e4-4e4i
         -4.0f30+3.0f20i

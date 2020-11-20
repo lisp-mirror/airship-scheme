@@ -151,9 +151,19 @@
                           (format nil "~A~A~A" sign-prefix starting-string exponent-char)))))
       (if result
           (read-case (stream char)
-            (#\0 (if (%delimiter? stream)
-                     result
-                     (read-as-symbol char)))
+            (#\0 (let ((next-char (peek-char nil stream nil :eof)))
+                   (cond
+                     ((delimiter? next-char)
+                      result)
+                     ((char-equal #\i next-char)
+                      (skip-read-char stream)
+                      (if (%delimiter? stream)
+                          (f:with-float-traps-masked t
+                            (values (complex 0 result) t))
+                          ;; TODO: fixme: turn this into a symbol
+                          (error "TODO: Turn this into a symbol")))
+                     (t
+                      (read-as-symbol char)))))
             (:eof (read-as-symbol* sign-prefix starting-string exponent-char))
             (t (read-as-symbol char)))
           (let* ((string-length* (+ 2 string-length))
@@ -189,18 +199,26 @@
   (let ((negate? (%negative? sign-prefix))
         (string "nan.0"))
     (multiple-value-bind (match? index) (always string stream)
-      (cond ((not match?)
-             (read-scheme-symbol stream
-                                 :prefix (format nil
-                                                 "~A~A"
-                                                 sign-prefix
-                                                 (subseq string 0 index))))
-            ((%delimiter? stream)
-             (nan 'double-float negate?))
-            (t
-             (multiple-value-bind (result exponent-char)
-                 (read-exponent* stream)
-               (%read-final-char string (nan result negate?) exponent-char sign-prefix stream)))))))
+      (let ((next-char (peek-char nil stream nil :eof)))
+        (cond ((not match?)
+               (read-scheme-symbol stream
+                                   :prefix (format nil
+                                                   "~A~A"
+                                                   sign-prefix
+                                                   (subseq string 0 index))))
+              ((delimiter? next-char)
+               (nan 'double-float negate?))
+              ((char-equal #\i next-char)
+               (skip-read-char stream)
+               (if (%delimiter? stream)
+                   (f:with-float-traps-masked t
+                     (values (complex 0 (nan 'double-float negate?)) t))
+                   ;; TODO: fixme: turn this into a symbol
+                   (error "TODO: Turn this into a symbol")))
+              (t
+               (multiple-value-bind (result exponent-char)
+                   (read-exponent* stream)
+                 (%read-final-char string (nan result negate?) exponent-char sign-prefix stream))))))))
 
 ;;; Reads an inf candidate, either as a trivial imaginary number, a
 ;;; floating point infinity, or as an identifier.
@@ -215,20 +233,29 @@
     (if (%delimiter? stream)
         (values (complex 0 (if negate? -1 1)) t)
         (multiple-value-bind (match? index) (always (subseq string 1) stream)
-          (cond ((not match?)
-                 (read-scheme-symbol stream
-                                     :prefix (format nil
-                                                     "~A~A"
-                                                     sign-prefix
-                                                     (subseq string 0 (1+ index)))))
-                ((%delimiter? stream)
-                 ;; Yes, most of INF's code is unreachable.
-                 (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-                   (inf 'double-float negate?)))
-                (t
-                 (multiple-value-bind (result exponent-char)
-                     (read-exponent* stream)
-                   (%read-final-char string (inf result negate?) exponent-char sign-prefix stream))))))))
+          (let ((next-char (peek-char nil stream nil :eof)))
+            (cond ((not match?)
+                   (read-scheme-symbol stream
+                                       :prefix (format nil
+                                                       "~A~A"
+                                                       sign-prefix
+                                                       (subseq string 0 (1+ index)))))
+                  ((delimiter? next-char)
+                   ;; Yes, most of INF's code is unreachable.
+                   (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
+                     (inf 'double-float negate?)))
+                  ((char-equal #\i next-char)
+                   (skip-read-char stream)
+                   (if (%delimiter? stream)
+                       (f:with-float-traps-masked t
+                         (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
+                           (values (complex 0 (inf 'double-float negate?)) t)))
+                       ;; TODO: fixme: turn this into a symbol
+                       (error "TODO: Turn this into a symbol")))
+                  (t
+                   (multiple-value-bind (result exponent-char)
+                       (read-exponent* stream)
+                     (%read-final-char string (inf result negate?) exponent-char sign-prefix stream)))))))))
 
 ;;; Reads a numeric sign if present.
 (defun %read-sign (stream)
@@ -351,9 +378,8 @@
                  (next-char (peek-char nil stream nil :eof)))
              (if (delimiter? next-char)
                  sign-prefix
-                 ;; TODO: support ending with i as a valid infnan and
-                 ;; permit ending in an unread @ so infnan can be in
-                 ;; the first part of a foo@bar
+                 ;; TODO: permit ending in an unread @ so infnan can
+                 ;; be in the first part of a foo@bar
                  (%read-infnan-or-regular-number t next-char radix sign-prefix stream))))
          ;; Note: Ending in a delimiter means there is no second part.
          ;; Ending in an #\i means that the "first" part was really
@@ -370,7 +396,8 @@
                     (read-case (stream match)
                       ((:or #\i #\I)
                        (complex 0 number))
-                      ;; TODO: Support infnan in the first part, not just the second
+                      ;; TODO: Support infnan in the first part, not
+                      ;; just the second
                       (#\@
                        (let* ((sign-prefix* (%read-sign stream))
                               (next-char (peek-char nil stream nil :eof))
@@ -378,7 +405,9 @@
                          (f:with-float-traps-masked t
                            (* (if (rationalp number) (double-float* number) number)
                               (cis (if (rationalp number) (double-float* number*) number*))))))
-                      ;; TODO: Support infnan in the first and second parts
+                      ;; TODO: Support infnan in the first and second
+                      ;; parts; that is, don't treat an infnan ending
+                      ;; in a + or - as a symbol, at least not yet.
                       ((:or #\+ #\-)
                        (let* ((sign-prefix* match)
                               (number* (%read-regular-scheme-number radix sign-prefix* stream)))
