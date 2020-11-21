@@ -68,6 +68,14 @@
                                         "standard in section 7.1.1, whitespace between #u8 "
                                         "and its parentheses is not permitted.")))
 
+(defun invalid-infnan-error ()
+  (error 'scheme-reader-error
+         :details #.(concatenate 'string
+                                 "Tokens that start with \"+inf.\", \"-inf.\", "
+                                 "\"+nan.\", and \"-nan.\" that are not currently "
+                                 "valid numeric syntax are reserved for future "
+                                 "expansions to the Airship Scheme numeric syntax.")))
+
 ;;; A simple macro for a simple EOF error.
 (defmacro eof-error (details)
   `(error 'scheme-reader-eof-error :details ,details))
@@ -129,66 +137,36 @@
     (values match? (1- i))))
 
 ;;; Reads the final character if an NaN or inf candidate.
-(define-function %read-final-char ((starting-string (simple-string 5))
-                                   result
-                                   (exponent-char character)
-                                   sign-prefix
-                                   stream)
-  (let ((string-length 5))
-    (flet ((read-as-symbol (char)
-             (let* ((string-length* (+ 3 string-length))
-                    (string (make-string string-length*)))
-               (replace string starting-string :start1 1)
-               (setf (aref string 0) sign-prefix
-                     (aref string (- string-length* 2)) exponent-char
-                     (aref string (- string-length* 1)) char)
-               (read-scheme-symbol stream :prefix string)))
-           ;; If there's nothing afterwards, then this shortcut can be
-           ;; taken in creating the symbol.
-           (read-as-symbol* (sign-prefix starting-string exponent-char)
-             (intern (map 'string
-                          #'%invert-case
-                          (format nil "~A~A~A" sign-prefix starting-string exponent-char)))))
-      (if result
-          (read-case (stream char)
-            (#\0 (let ((next-char (peek-char* stream)))
-                   (cond
-                     ((delimiter? next-char)
-                      result)
-                     ((char-equal #\i next-char)
-                      (skip-read-char stream)
-                      (if (%delimiter? stream)
-                          (f:with-float-traps-masked t
-                            (values (complex 0 result) t))
-                          ;; TODO: fixme: turn this into a symbol
-                          (error "TODO: Turn this into a symbol")))
-                     (t
-                      (read-as-symbol char)))))
-            (:eof (read-as-symbol* sign-prefix starting-string exponent-char))
-            (t (read-as-symbol char)))
-          (let* ((string-length* (+ 2 string-length))
-                 (string (make-string string-length*)))
-            (replace string starting-string :start1 1)
-            (setf (aref string 0) sign-prefix
-                  (aref string (- string-length* 1)) exponent-char)
-            (read-scheme-symbol stream :prefix string))))))
+(define-function %read-final-char (result stream)
+  (if result
+      (read-case (stream char)
+        (#\0 (let ((next-char (peek-char* stream)))
+               (cond
+                 ((delimiter? next-char)
+                  result)
+                 ((char-equal #\i next-char)
+                  (skip-read-char stream)
+                  (if (%delimiter? stream)
+                      (f:with-float-traps-masked t
+                        (values (complex 0 result) t))
+                      (invalid-infnan-error)))
+                 (t
+                  (invalid-infnan-error)))))
+        (t (invalid-infnan-error)))
+      (invalid-infnan-error)))
 
 ;;; Reads the exponent of a NaN or infinite flonum.
 (defun read-exponent* (stream &optional unread-if-no-match?)
   (read-case (stream exponent-char)
-    ((:or #\e #\E #\d #\D)
-     (values 'double-float exponent-char))
-    ((:or #\f #\F)
-     (values 'single-float exponent-char))
-    ((:or #\l #\L)
-     (values 'long-float exponent-char))
-    ((:or #\s #\S)
-     (values 'short-float exponent-char))
+    ((:or #\e #\E #\d #\D) 'double-float)
+    ((:or #\f #\F) 'single-float)
+    ((:or #\l #\L) 'long-float)
+    ((:or #\s #\S) 'short-float)
     (t
      (when (and unread-if-no-match?
                 (not (eql exponent-char :eof)))
        (unread-char exponent-char stream))
-     (values nil exponent-char))))
+     nil)))
 
 ;;; Reads a NaN candidate, either as a NaN or as an identifier.
 ;;;
@@ -201,11 +179,13 @@
     (multiple-value-bind (match? index) (always string stream)
       (let ((next-char (peek-char* stream)))
         (cond ((not match?)
-               (read-scheme-symbol stream
-                                   :prefix (format nil
-                                                   "~A~A"
-                                                   sign-prefix
-                                                   (subseq string 0 index))))
+               (if (< index (- (length string) 1))
+                   (read-scheme-symbol stream
+                                       :prefix (format nil
+                                                       "~A~A"
+                                                       sign-prefix
+                                                       (subseq string 0 index)))
+                   (invalid-infnan-error)))
               ((delimiter? next-char)
                (nan 'double-float negate?))
               ((char-equal #\i next-char)
@@ -213,12 +193,9 @@
                (if (%delimiter? stream)
                    (f:with-float-traps-masked t
                      (values (complex 0 (nan 'double-float negate?)) t))
-                   ;; TODO: fixme: turn this into a symbol
-                   (error "TODO: Turn this into a symbol")))
+                   (invalid-infnan-error)))
               (t
-               (multiple-value-bind (result exponent-char)
-                   (read-exponent* stream)
-                 (%read-final-char string (nan result negate?) exponent-char sign-prefix stream))))))))
+               (%read-final-char (nan (read-exponent* stream) negate?) stream)))))))
 
 ;;; Reads an inf candidate, either as a trivial imaginary number, a
 ;;; floating point infinity, or as an identifier.
@@ -235,13 +212,14 @@
         (multiple-value-bind (match? index) (always (subseq string 1) stream)
           (let ((next-char (peek-char* stream)))
             (cond ((not match?)
-                   (read-scheme-symbol stream
-                                       :prefix (format nil
-                                                       "~A~A"
-                                                       sign-prefix
-                                                       (subseq string 0 (1+ index)))))
+                   (if (< index (- (length string) 2))
+                       (read-scheme-symbol stream
+                                           :prefix (format nil
+                                                           "~A~A"
+                                                           sign-prefix
+                                                           (subseq string 0 (1+ index))))
+                       (invalid-infnan-error)))
                   ((delimiter? next-char)
-                   ;; Yes, most of INF's code is unreachable.
                    (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
                      (inf 'double-float negate?)))
                   ((char-equal #\i next-char)
@@ -250,12 +228,9 @@
                        (f:with-float-traps-masked t
                          (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
                            (values (complex 0 (inf 'double-float negate?)) t)))
-                       ;; TODO: fixme: turn this into a symbol
-                       (error "TODO: Turn this into a symbol")))
+                       (invalid-infnan-error)))
                   (t
-                   (multiple-value-bind (result exponent-char)
-                       (read-exponent* stream)
-                     (%read-final-char string (inf result negate?) exponent-char sign-prefix stream)))))))))
+                   (%read-final-char (inf (read-exponent* stream) negate?) stream))))))))
 
 ;;; Reads a numeric sign if present.
 (defun %read-sign (stream)
@@ -361,10 +336,17 @@
 ;;; creating a symbol instead of a number. If #e or #x etc. are used,
 ;;; then a symbol can't be created.
 ;;;
-;;; Note: Instead of an error, this failed candidate of a number could
-;;; be read as a symbol, like in CL and Racket. This is potentially
-;;; still valid as a symbol in R7RS-small if it began with a . instead
-;;; of a number, such as .1foo
+;;; Note: Instead of an error, most failed candidates of a number
+;;; could be read as a symbol, like in CL and Racket. This is
+;;; potentially still valid as a symbol in R7RS-small if it began with
+;;; a . instead of a number, such as .1foo
+;;;
+;;; TODO: Make sure that everything that starts with "[+-]{infnan}."
+;;; is an (invalid-infnan-error) instead of another error or a symbol
+;;; in order to reserve the syntax for future expansions to the
+;;; Airship Scheme syntax. This should work as expected except when a
+;;; two-part number starts with a valid infnan and then becomes
+;;; invalid.
 ;;;
 ;;; Note: This extends the syntax by permitting an imaginary number to
 ;;; exist without a sign prefix in certain cases, e.g. "4i".
