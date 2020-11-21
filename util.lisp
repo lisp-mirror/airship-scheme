@@ -76,3 +76,7 @@ in a form that CL expects.
 (define-function (skip-read-char :inline t) (stream)
   "Call this when the result is to be ignored."
   (read-char stream nil nil t))
+
+(define-function (peek-char* :inline t) (stream)
+  "A simplified version of `peek-char' for the Scheme reader."
+  (peek-char nil stream nil :eof))

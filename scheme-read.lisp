@@ -84,7 +84,7 @@
 
 (define-function (%delimiter? :inline t) (stream)
   "Tests to see if the next character in a stream is a delimiter."
-  (delimiter? (peek-char nil stream nil :eof)))
+  (delimiter? (peek-char* stream)))
 
 (define-function (%negative? :inline t) (character)
   "Tests to see if the character represents negation."
@@ -151,7 +151,7 @@
                           (format nil "~A~A~A" sign-prefix starting-string exponent-char)))))
       (if result
           (read-case (stream char)
-            (#\0 (let ((next-char (peek-char nil stream nil :eof)))
+            (#\0 (let ((next-char (peek-char* stream)))
                    (cond
                      ((delimiter? next-char)
                       result)
@@ -199,7 +199,7 @@
   (let ((negate? (%negative? sign-prefix))
         (string "nan.0"))
     (multiple-value-bind (match? index) (always string stream)
-      (let ((next-char (peek-char nil stream nil :eof)))
+      (let ((next-char (peek-char* stream)))
         (cond ((not match?)
                (read-scheme-symbol stream
                                    :prefix (format nil
@@ -233,7 +233,7 @@
     (if (%delimiter? stream)
         (values (complex 0 (if negate? -1 1)) t)
         (multiple-value-bind (match? index) (always (subseq string 1) stream)
-          (let ((next-char (peek-char nil stream nil :eof)))
+          (let ((next-char (peek-char* stream)))
             (cond ((not match?)
                    (read-scheme-symbol stream
                                        :prefix (format nil
@@ -259,7 +259,7 @@
 
 ;;; Reads a numeric sign if present.
 (defun %read-sign (stream)
-  (case (peek-char nil stream nil :eof)
+  (case (peek-char* stream)
     (:eof (eof-error "when a number was expected"))
     ((#\+ #\-) (read-char stream))
     (t nil)))
@@ -313,7 +313,7 @@
   (multiple-value-bind (number length) (read-scheme-integer stream radix)
     ;; A leading decimal point implicitly has a 0 in front.
     ;; Otherwise, no number at the start is an error.
-    (let ((next-char (peek-char nil stream nil :eof)))
+    (let ((next-char (peek-char* stream)))
       (error-when (and (zerop length)
                        (not (eql #\. next-char)))
                   'scheme-reader-error
@@ -375,7 +375,7 @@
   ;;   {first}@{second}
   (flet ((first-part (stream)
            (let ((sign-prefix (%read-sign stream))
-                 (next-char (peek-char nil stream nil :eof)))
+                 (next-char (peek-char* stream)))
              (if (delimiter? next-char)
                  sign-prefix
                  ;; TODO: permit ending in an unread @ so infnan can
@@ -400,7 +400,7 @@
                       ;; just the second
                       (#\@
                        (let* ((sign-prefix* (%read-sign stream))
-                              (next-char (peek-char nil stream nil :eof))
+                              (next-char (peek-char* stream))
                               (number* (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream)))
                          (f:with-float-traps-masked t
                            (* (if (rationalp number) (double-float* number) number)
@@ -436,7 +436,7 @@
 
 ;;; Reads a number for the Scheme reader or string-to-number.
 (defun read-scheme-number (stream &optional (radix 10))
-  (let* ((next-char (peek-char nil stream nil :eof))
+  (let* ((next-char (peek-char* stream))
          (possible-number (if (eql next-char #\#)
                               (progn
                                 (skip-read-char stream)
@@ -524,7 +524,7 @@
 ;;; Determine which base the number is in based on a literal syntax.
 ;;; For example, #x means that it's in hexadecimal.
 (defun %find-read-base (stream &optional (radix 10))
-  (let ((next-char (peek-char nil stream nil :eof)))
+  (let ((next-char (peek-char* stream)))
     (case next-char
       (#\#
        (skip-read-char stream)
@@ -544,7 +544,7 @@
 ;;; (non-float) and if it is followed by #i then it is read as an
 ;;; inexact (float).
 (defun %read-in-base (stream base)
-  (let* ((next-char (peek-char nil stream nil :eof))
+  (let* ((next-char (peek-char* stream))
          (exactness (case next-char
                       (#\#
                        (skip-read-char stream)
@@ -742,8 +742,8 @@
 ;;; A dot can represent a possible number (if not, it's a symbol), a
 ;;; part of a dotted list, or the start of a symbol.
 (defun read-scheme-dot (match stream)
-  (let ((next-char (peek-char nil stream nil nil)))
-    (cond ((not next-char)
+  (let ((next-char (peek-char* stream)))
+    (cond ((eql :eof next-char)
            (eof-error "after a dot"))
           ((digit-char-p next-char)
            (unread-char match stream)
@@ -768,7 +768,7 @@
     (#\# (read-special stream))
     (#\' :quote)
     (#\` :quasiquote)
-    (#\, (if (eql #\@ (peek-char nil stream nil :eof))
+    (#\, (if (eql #\@ (peek-char* stream))
              (progn
                (skip-read-char stream)
                :unquote-splicing)
