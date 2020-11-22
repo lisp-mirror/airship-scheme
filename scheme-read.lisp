@@ -173,18 +173,22 @@
 ;;; As an extension, the exponentiation suffix is permitted (with 0 as
 ;;; the only allowed exponent) as a way to get a NaN of a different
 ;;; floating point type.
-(defun %read-nan (sign-prefix stream)
+(defun %read-nan (sign-prefix stream no-symbol?)
   (let ((negate? (%negative? sign-prefix))
         (string "nan.0"))
     (multiple-value-bind (match? index) (always string stream)
       (let ((next-char (peek-char* stream)))
         (cond ((not match?)
                (if (< index (- (length string) 1))
-                   (read-scheme-symbol stream
-                                       :prefix (format nil
-                                                       "~A~A"
-                                                       sign-prefix
-                                                       (subseq string 0 index)))
+                   (progn
+                     (error-when no-symbol?
+                                 'scheme-reader-error
+                                 :details "Invalid numerical syntax.")
+                     (read-scheme-symbol stream
+                                         :prefix (format nil
+                                                         "~A~A"
+                                                         sign-prefix
+                                                         (subseq string 0 index))))
                    (invalid-infnan-error)))
               ((delimiter? next-char)
                (nan 'double-float negate?))
@@ -203,7 +207,7 @@
 ;;; As an extension, the exponentiation suffix is permitted (with 0 as
 ;;; the only allowed exponent) as a way to get an infinity of a
 ;;; different floating point type.
-(defun %read-inf-or-i (sign-prefix stream)
+(defun %read-inf-or-i (sign-prefix stream no-symbol?)
   (let ((negate? (%negative? sign-prefix))
         (string "inf.0"))
     (skip-read-char stream)
@@ -213,11 +217,15 @@
           (let ((next-char (peek-char* stream)))
             (cond ((not match?)
                    (if (< index (- (length string) 2))
-                       (read-scheme-symbol stream
-                                           :prefix (format nil
-                                                           "~A~A"
-                                                           sign-prefix
-                                                           (subseq string 0 (1+ index))))
+                       (progn
+                         (error-when no-symbol?
+                                     'scheme-reader-error
+                                     :details "Invalid numerical syntax.")
+                         (read-scheme-symbol stream
+                                             :prefix (format nil
+                                                             "~A~A"
+                                                             sign-prefix
+                                                             (subseq string 0 (1+ index)))))
                        (invalid-infnan-error)))
                   ((delimiter? next-char)
                    (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
@@ -302,13 +310,13 @@
                           (%read-scheme-number-suffix number radix stream)))))
       number)))
 
-(defun %read-infnan-or-regular-number (first? next-char radix sign-prefix stream)
+(defun %read-infnan-or-regular-number (first? next-char radix sign-prefix stream no-symbol?)
   (cond ((and sign-prefix (char-equal next-char #\n))
          ;; Reads NaN or a symbol.
-         (%read-nan sign-prefix stream))
+         (%read-nan sign-prefix stream no-symbol?))
         ((and sign-prefix (char-equal next-char #\i))
          ;; Reads +i, -i, inf, or a symbol.
-         (%read-inf-or-i sign-prefix stream))
+         (%read-inf-or-i sign-prefix stream no-symbol?))
         ((or (digit-char-p next-char radix)
              (eql next-char #\.))
          ;; Reads a number like 4 or .4
@@ -317,6 +325,9 @@
         ;; CL-style constant names, e.g. +foo+, excluding +
         ;; or - themselves (the first case in the COND).
         ((and first? sign-prefix)
+         (error-when no-symbol?
+                     'scheme-reader-error
+                     :details "Invalid numerical syntax.")
          (read-scheme-symbol stream :prefix (make-string 1 :initial-element sign-prefix)))
         ;; Everything else is an error here.
         ;;
@@ -332,10 +343,6 @@
 ;;; Reads a Scheme number in the given radix. If end? then it must be
 ;;; the end of the stream after reading the number.
 ;;;
-;;; TODO: Take into account when #e or #x or so on are used when
-;;; creating a symbol instead of a number. If #e or #x etc. are used,
-;;; then a symbol can't be created.
-;;;
 ;;; Note: Instead of an error, most failed candidates of a number
 ;;; could be read as a symbol, like in CL and Racket. This is
 ;;; potentially still valid as a symbol in R7RS-small if it began with
@@ -350,7 +357,7 @@
 ;;;
 ;;; Note: This extends the syntax by permitting an imaginary number to
 ;;; exist without a sign prefix in certain cases, e.g. "4i".
-(defun %read-scheme-number (stream radix)
+(defun %read-scheme-number (stream radix &optional no-symbol?)
   ;; A complex number has two different ways to have a second part:
   ;;
   ;;   {first}+{second}i or {first}-{second}i
@@ -362,7 +369,7 @@
                  sign-prefix
                  ;; TODO: permit ending in an unread @ so infnan can
                  ;; be in the first part of a foo@bar
-                 (%read-infnan-or-regular-number t next-char radix sign-prefix stream))))
+                 (%read-infnan-or-regular-number t next-char radix sign-prefix stream no-symbol?))))
          ;; Note: Ending in a delimiter means there is no second part.
          ;; Ending in an #\i means that the "first" part was really
          ;; the second part.
@@ -383,7 +390,7 @@
                       (#\@
                        (let* ((sign-prefix* (%read-sign stream))
                               (next-char (peek-char* stream))
-                              (number* (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream)))
+                              (number* (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream t)))
                          (f:with-float-traps-masked t
                            (* (if (rationalp number) (double-float* number) number)
                               (cis (if (rationalp number) (double-float* number*) number*))))))
@@ -423,7 +430,7 @@
                               (progn
                                 (skip-read-char stream)
                                 (%read-special stream radix))
-                              (%read-scheme-number stream radix))))
+                              (%read-scheme-number stream radix t))))
     (if (numberp possible-number)
         possible-number
         nil)))
@@ -540,7 +547,7 @@
                        (eof-error "when a number was expected"))
                       (t
                        nil)))
-         (number (%read-scheme-number stream base)))
+         (number (%read-scheme-number stream base t)))
     (if exactness
         (funcall exactness number)
         number)))
@@ -586,10 +593,10 @@
   (read-case (stream x)
     ((:or #\e #\E)
      (let ((read-base (%find-read-base stream radix)))
-       (exact (%read-scheme-number stream read-base))))
+       (exact (%read-scheme-number stream read-base t))))
     ((:or #\i #\I)
      (let ((read-base (%find-read-base stream radix)))
-       (inexact (%read-scheme-number stream read-base))))
+       (inexact (%read-scheme-number stream read-base t))))
     ((:or #\b #\B)
      (%read-in-base stream 2))
     ((:or #\o #\O)
