@@ -82,6 +82,49 @@ though. |#
 
 ;;;; Numeric syntax
 
+;;; The following list is an example of most of the possible ways to
+;;; write a number. Most of the syntactic complexity comes from
+;;; complex numbers and the floating point infinities/NaNs. This
+;;; latter type of syntax is called "infnan" in the R7RS-small
+;;; specification.
+;;;
+;;; Airship Scheme uses the optional, CL-style specifiers for the
+;;; different floating point types: short-float (s), single-float (f),
+;;; double-float (d), and long-float (l). Airship Scheme uses the same
+;;; floating point types as the host CL. Virtually every CL will have
+;;; distinct single and double float types, and some will have long
+;;; floats, but only a few will have short floats.
+;;;
+;;; Unlike in some programming languages, the exponent is required,
+;;; e.g. "1f0". On the other hand, "1f" is invalid.
+;;;
+;;; CL defaults to single-float when no float type is specified, but
+;;; the default in Scheme is double-float so a number like 4e3 or 5.0
+;;; is a double-float, not a single-float.
+;;;
+;;; The standard is silent on how to extend the "infnan" syntax to
+;;; these different floating point types. Racket uses syntax like
+;;; "+inf.f" for the single-float infnan syntax, but this looks ugly
+;;; and doesn't even look like a number. It also prevents extensions
+;;; to the infnan syntax that permit nonzero integers after the dot.
+;;; Airship Scheme uses "s0", "f0", "d0", and "l0" because this is the
+;;; main way to turn regular numbers into the respective float type.
+;;; The "0" means to multiply by 10^0, i.e. 1.
+;;;
+;;; In Airship Scheme, anything that starts in "+" or "-" followed by
+;;; "inf." or "nan." is either a number or an error; it cannot be a
+;;; symbol. These syntax errors reserve the infnan syntax for future
+;;; extensions to the language without breaking existing code.
+;;;
+;;; Besides the addition of the literal infnan, the main difference
+;;; here between Scheme and Common Lisp is the way complex numbers are
+;;; written. In Common Lisp, a complex number is written in the style
+;;; of "#C(2 3)", while the Scheme style is "2+3i". This makes the
+;;; Scheme numeric syntax considerably more complicated. Scheme also
+;;; supports polar notation, e.g. "-3@4".
+;;;
+;;; Also note that in CL, "4." becomes the integer "4" while in
+;;; Scheme, "4." becomes the flonum "4.0".
 (define numbers
   (list 1
         +1
