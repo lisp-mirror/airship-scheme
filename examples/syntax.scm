@@ -82,14 +82,15 @@ though. |#
 
 ;;;; Numeric syntax
 
-;;;; TODO: Not every kind of literal number is included here yet.
-
 (define numbers
   (list 1
+        +1
         -1
         1.0
         4.
         .4
+        -.4
+        +.4
         1.0f0
         -1.2s3
         1.0l-1
@@ -107,13 +108,18 @@ though. |#
         -nan.0f0
         -4i
         +3i
-        ;; +inf.0+inf.0i
-        ;; +inf.0-nan.0i
-        ;; +nan.0+inf.0i
-        ;; 4-inf.0i
-        ;; -12+nan.0f0i
-        ;; +inf.0-3i
-        ;; -nan.0+42i
+        +inf.0+inf.0i
+        +inf.0-nan.0i
+        +nan.0+inf.0i
+        4-inf.0i
+        -12+nan.0f0i
+        +inf.0-3i
+        -nan.0+42i
+        -nan.0f0-333i
+        -nan.0f0+inf.0f0i
+        +inf.0f0+22i
+        +inf.0f0-nan.0f0i
+        333+nan.0f0i
         +inf.0i
         -inf.0f0i
         -nan.0i
@@ -128,11 +134,11 @@ though. |#
         -3.0@+4e3
         4@+inf.0
         -7@-nan.0
-        ;; +inf.0@-3
-        ;; +nan.0@42
-        ;; +inf.0@-inf.0
-        ;; -nan.0@+nan.0
-        ))
+        +inf.0f0@111
+        +inf.0@-3
+        +nan.0@42
+        +inf.0@-inf.0
+        -nan.0@+nan.0))
 
 ;;;; TODO: The rest of the syntax will be demonstrated here, but this
 ;;;; file is currently incomplete.

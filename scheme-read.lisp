@@ -137,7 +137,7 @@
     (values match? (1- i))))
 
 ;;; Reads the final character if an NaN or inf candidate.
-(define-function %read-final-char (result stream)
+(define-function %read-final-char (result stream first?)
   (if result
       (read-case (stream char)
         (#\0 (let ((next-char (peek-char* stream)))
@@ -145,11 +145,14 @@
                  ((delimiter? next-char)
                   result)
                  ((char-equal #\i next-char)
-                  (skip-read-char stream)
-                  (if (%delimiter? stream)
+                  (when first?
+                    (skip-read-char stream))
+                  (if (or (not first?) (%delimiter? stream))
                       (f:with-float-traps-masked t
-                        (values (complex 0 result) t))
+                        (values (if first? (complex 0 result) result) t))
                       (invalid-infnan-error)))
+                 ((and first? (member next-char '(#\@ #\+ #\-) :test #'char=))
+                  result)
                  (t
                   (invalid-infnan-error)))))
         (t (invalid-infnan-error)))
@@ -173,7 +176,7 @@
 ;;; As an extension, the exponentiation suffix is permitted (with 0 as
 ;;; the only allowed exponent) as a way to get a NaN of a different
 ;;; floating point type.
-(defun %read-nan (sign-prefix stream no-symbol?)
+(defun %read-nan (sign-prefix stream no-symbol? first?)
   (let ((negate? (%negative? sign-prefix))
         (string "nan.0"))
     (multiple-value-bind (match? index) (always string stream)
@@ -193,13 +196,17 @@
               ((delimiter? next-char)
                (nan 'double-float negate?))
               ((char-equal #\i next-char)
-               (skip-read-char stream)
-               (if (%delimiter? stream)
+               (when first?
+                 (skip-read-char stream))
+               (if (or (not first?) (%delimiter? stream))
                    (f:with-float-traps-masked t
-                     (values (complex 0 (nan 'double-float negate?)) t))
+                     (let ((result (nan 'double-float negate?)))
+                       (values (if first? (complex 0 result) result) t)))
                    (invalid-infnan-error)))
+              ((and first? (member next-char '(#\@ #\+ #\-) :test #'char=))
+               (nan 'double-float negate?))
               (t
-               (%read-final-char (nan (read-exponent* stream) negate?) stream)))))))
+               (%read-final-char (nan (read-exponent* stream) negate?) stream first?)))))))
 
 ;;; Reads an inf candidate, either as a trivial imaginary number, a
 ;;; floating point infinity, or as an identifier.
@@ -207,7 +214,7 @@
 ;;; As an extension, the exponentiation suffix is permitted (with 0 as
 ;;; the only allowed exponent) as a way to get an infinity of a
 ;;; different floating point type.
-(defun %read-inf-or-i (sign-prefix stream no-symbol?)
+(defun %read-inf-or-i (sign-prefix stream no-symbol? first?)
   (let ((negate? (%negative? sign-prefix))
         (string "inf.0"))
     (skip-read-char stream)
@@ -231,14 +238,19 @@
                    (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
                      (inf 'double-float negate?)))
                   ((char-equal #\i next-char)
-                   (skip-read-char stream)
-                   (if (%delimiter? stream)
+                   (when first?
+                     (skip-read-char stream))
+                   (if (or (not first?) (%delimiter? stream))
                        (f:with-float-traps-masked t
                          (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-                           (values (complex 0 (inf 'double-float negate?)) t)))
+                           (let ((result (inf 'double-float negate?)))
+                             (values (if first? (complex 0 result) result) t))))
                        (invalid-infnan-error)))
+                  ((and first? (member next-char '(#\@ #\+ #\-) :test #'char=))
+                   (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
+                     (inf 'double-float negate?)))
                   (t
-                   (%read-final-char (inf (read-exponent* stream) negate?) stream))))))))
+                   (%read-final-char (inf (read-exponent* stream) negate?) stream first?))))))))
 
 ;;; Reads a numeric sign if present.
 (defun %read-sign (stream)
@@ -313,10 +325,10 @@
 (defun %read-infnan-or-regular-number (first? next-char radix sign-prefix stream no-symbol?)
   (cond ((and sign-prefix (char-equal next-char #\n))
          ;; Reads NaN or a symbol.
-         (%read-nan sign-prefix stream no-symbol?))
+         (%read-nan sign-prefix stream no-symbol? first?))
         ((and sign-prefix (char-equal next-char #\i))
          ;; Reads +i, -i, inf, or a symbol.
-         (%read-inf-or-i sign-prefix stream no-symbol?))
+         (%read-inf-or-i sign-prefix stream no-symbol? first?))
         ((or (digit-char-p next-char radix)
              (eql next-char #\.))
          ;; Reads a number like 4 or .4
@@ -348,13 +360,6 @@
 ;;; potentially still valid as a symbol in R7RS-small if it began with
 ;;; a . instead of a number, such as .1foo
 ;;;
-;;; TODO: Make sure that everything that starts with "[+-]{infnan}."
-;;; is an (invalid-infnan-error) instead of another error or a symbol
-;;; in order to reserve the syntax for future expansions to the
-;;; Airship Scheme syntax. This should work as expected except when a
-;;; two-part number starts with a valid infnan and then becomes
-;;; invalid.
-;;;
 ;;; Note: This extends the syntax by permitting an imaginary number to
 ;;; exist without a sign prefix in certain cases, e.g. "4i".
 (defun %read-scheme-number (stream radix &optional no-symbol?)
@@ -367,8 +372,6 @@
                  (next-char (peek-char* stream)))
              (if (delimiter? next-char)
                  sign-prefix
-                 ;; TODO: permit ending in an unread @ so infnan can
-                 ;; be in the first part of a foo@bar
                  (%read-infnan-or-regular-number t next-char radix sign-prefix stream no-symbol?))))
          ;; Note: Ending in a delimiter means there is no second part.
          ;; Ending in an #\i means that the "first" part was really
@@ -385,8 +388,6 @@
                     (read-case (stream match)
                       ((:or #\i #\I)
                        (complex 0 number))
-                      ;; TODO: Support infnan in the first part, not
-                      ;; just the second
                       (#\@
                        (let* ((sign-prefix* (%read-sign stream))
                               (next-char (peek-char* stream))
@@ -394,18 +395,17 @@
                          (f:with-float-traps-masked t
                            (* (if (rationalp number) (double-float* number) number)
                               (cis (if (rationalp number) (double-float* number*) number*))))))
-                      ;; TODO: Support infnan in the first and second
-                      ;; parts; that is, don't treat an infnan ending
-                      ;; in a + or - as a symbol, at least not yet.
                       ((:or #\+ #\-)
                        (let* ((sign-prefix* match)
-                              (number* (%read-regular-scheme-number radix sign-prefix* stream)))
+                              (next-char (peek-char* stream))
+                              (number* (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream t)))
                          (f:with-float-traps-masked t
                            (read-case (stream match)
                              ((:or #\i #\I)
                               (complex number number*))
-                             (t (error 'scheme-reader-error
-                                       :details "Invalid numerical syntax."))))))
+                             (t
+                              (error 'scheme-reader-error
+                                     :details "Invalid numerical syntax."))))))
                       (t
                        (error 'scheme-reader-error
                               :details "Invalid numerical syntax.")))
