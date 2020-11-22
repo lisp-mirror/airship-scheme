@@ -125,6 +125,19 @@ though. |#
 ;;;
 ;;; Also note that in CL, "4." becomes the integer "4" while in
 ;;; Scheme, "4." becomes the flonum "4.0".
+;;;
+;;; In a strict vanilla Scheme (as specified by the grammar in the
+;;; R7RS-small appendix), writing the imaginary number 7i as "7i" is
+;;; invalid; instead, it must be written as "+7i". However, there is
+;;; no point to make that into invalid syntax in Airship Scheme
+;;; because, unlike in CL, anything that starts with a number has to
+;;; either be a number or invalid. That is, in Scheme, symbols
+;;; starting with a number must be quoted with ||s, which means that
+;;; "7i" can't be read as a symbol. It's actually more work to make
+;;; "7i" an error instead of an imaginary number so it's easier to
+;;; make yet another syntax extension to R7RS-small. Chibi Scheme, the
+;;; first conforming R7RS-small implementation, also has this syntax
+;;; extension.
 (define numbers
   (list 1
         +1
@@ -151,6 +164,7 @@ though. |#
         -nan.0f0
         -4i
         +3i
+        7i
         +inf.0+inf.0i
         +inf.0-nan.0i
         +nan.0+inf.0i
