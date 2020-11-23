@@ -6,9 +6,6 @@
 ;;;
 ;;; TODO: in `read-special', handle labels (for literal circular/etc.
 ;;; data structures)
-;;;
-;;; TODO: any missing escapes in `%read-string' and elsewhere, where
-;;; also relevant
 
 (cl:in-package #:airship-scheme)
 
@@ -476,13 +473,28 @@
 
 ;;; The standard supports these escape characters in strings and a few
 ;;; other places. For instance, \n becomes a newline.
-(define-function (%one-char-escape :inline t) (char)
+(define-function (%one-char-escape :inline t) (char stream)
   (case char
     (#\n (code-char #x000a))
     (#\t (code-char #x0009))
     (#\a (code-char #x0007))
     (#\b (code-char #x0008))
     (#\r (code-char #x000d))
+    ;; The main special case is with hex escapes, which are
+    ;; "#\x{number};" where {number} is in base 16. Notice the
+    ;; semicolon terminator.
+    ;;
+    ;; Note: This skips the semicolon, which isn't normally skipped
+    ;; because delimiters aren't skipped.
+    (#\x
+     (prog1 (%read-hex-character stream #\;)
+       (skip-read-char stream)))
+    ;; ;; The other special case is \{whitespace}*{newline} because it
+    ;; ;; needs to skip any whitespace between the slash and the newline,
+    ;; ;; but is only valid if it's only whitespace.
+    ;; ;;
+    ;; ;; TODO: Implement this.
+    ;; (#\\)
     ;; Note: \", \\, and \| are specified. The rest are unspecified,
     ;; but use the CL approach of returning the character itself
     ;; rather than having an error. That's what this path represents.
@@ -503,7 +515,7 @@
                         (eql match #\")))
         :unless escape?
           :do (vector-push-extend (if after-escape?
-                                      (%one-char-escape match)
+                                      (%one-char-escape match stream)
                                       match)
                                   buffer)
         :finally (return (if match
@@ -552,6 +564,17 @@
         (funcall exactness number)
         number)))
 
+(defun %read-hex-character (stream &optional delimiter-char)
+  (multiple-value-bind (number length)
+      (read-scheme-integer stream 16)
+    (error-when (or (zerop length)
+                    (if delimiter-char
+                        (not (eql #\; (peek-char* stream)))
+                        (not (%delimiter? stream))))
+                'scheme-reader-error
+                :details "Invalid hexadecimal number.")
+    (code-char number)))
+
 ;;; Literal reader syntax for a character. This is either one
 ;;; character, like #\a, or it is a hex escape, like #\x42, or it is a
 ;;; named character, like #\newline.
@@ -560,13 +583,7 @@
     ((:or #\x #\X)
      (if (%delimiter? stream)
          c
-         (multiple-value-bind (number length)
-             (read-scheme-integer stream 16)
-           (error-when (or (zerop length)
-                           (not (%delimiter? stream)))
-                       'scheme-reader-error
-                       :details "Invalid hexadecimal number.")
-           (code-char number))))
+         (%read-hex-character stream)))
     (t
      (if (%delimiter? stream)
          c
@@ -690,7 +707,7 @@
                        (#\\ (if after-escape? c :escape))
                        (:eof (eof-error "inside of a |"))
                        (t (%invert-case (if after-escape?
-                                            (%one-char-escape c)
+                                            (%one-char-escape c stream)
                                             c))))
         :for escape? := (eql char :escape)
         :with buffer := (make-adjustable-string)
