@@ -489,12 +489,25 @@
     (#\x
      (prog1 (%read-hex-character stream #\;)
        (skip-read-char stream)))
-    ;; ;; The other special case is \{whitespace}*{newline} because it
-    ;; ;; needs to skip any whitespace between the slash and the newline,
-    ;; ;; but is only valid if it's only whitespace.
-    ;; ;;
-    ;; ;; TODO: Implement this.
-    ;; (#\\)
+    ;; The other special case is \{whitespace}*{newline} because it
+    ;; needs to skip any whitespace between the slash and the newline,
+    ;; but is only valid if it's only whitespace.
+    ;;
+    ;; For now this just uses the simplified Space-or-Tab whitespace.
+    ((#\Space #\Tab #\Newline)
+     (if (char= char #\Newline)
+         nil
+         (loop :with whitespace? := nil
+               :for c := (read-case (stream c)
+                           (#\Newline t)
+                           ((:or #\Space #\Tab)
+                            (setf whitespace? t)
+                            nil)
+                           (:eof (eof-error "when a newline was expected"))
+                           (t (error 'scheme-reader-error
+                                     :details (format nil "A newline expected, but ~A was read." c))))
+               :until c
+               :finally (return nil))))
     ;; Note: \", \\, and \| are specified. The rest are unspecified,
     ;; but use the CL approach of returning the character itself
     ;; rather than having an error. That's what this path represents.
@@ -514,10 +527,11 @@
                    (and (not after-escape?)
                         (eql match #\")))
         :unless escape?
-          :do (vector-push-extend (if after-escape?
-                                      (%one-char-escape match stream)
-                                      match)
-                                  buffer)
+          :do (let ((result (if after-escape?
+                                (%one-char-escape match stream)
+                                match)))
+                (when result
+                  (vector-push-extend result buffer)))
         :finally (return (if match
                              (subseq buffer 0 (fill-pointer buffer))
                              (eof-error "inside of a string")))))
@@ -706,13 +720,14 @@
                        (#\| (if after-escape? c nil))
                        (#\\ (if after-escape? c :escape))
                        (:eof (eof-error "inside of a |"))
-                       (t (%invert-case (if after-escape?
+                       (t (let ((result (if after-escape?
                                             (%one-char-escape c stream)
-                                            c))))
+                                            c)))
+                            (if result (%invert-case result) :skip))))
         :for escape? := (eql char :escape)
         :with buffer := (make-adjustable-string)
         :while char
-        :unless escape?
+        :unless (not (characterp char))
           :do (vector-push-extend char buffer)
         :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
                                  package))))
