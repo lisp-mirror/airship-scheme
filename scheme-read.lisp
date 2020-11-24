@@ -5,7 +5,7 @@
 ;;; Unicode's rules!)
 ;;;
 ;;; TODO: in `read-special', handle labels (for literal circular/etc.
-;;; data structures)
+;;; data structures)... e.g. '#1=(1 #1#)
 
 (cl:in-package #:airship-scheme)
 
@@ -723,17 +723,18 @@
                        (t (let ((result (if after-escape?
                                             (%one-char-escape c stream)
                                             c)))
-                            (if result (%invert-case result) :skip))))
+                            (or result :skip))))
         :for escape? := (eql char :escape)
         :with buffer := (make-adjustable-string)
         :while char
         :unless (not (characterp char))
-          :do (vector-push-extend char buffer)
+          :do (vector-push-extend (%invert-case char) buffer)
         :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
                                  package))))
 
 ;;; Reads until the delimiter and turns it into a Scheme symbol.
 (defun read-scheme-symbol (stream &key (package *package*) prefix)
+  (check-type prefix sequence)
   (loop :for char := (read-case (stream c)
                        (#\(
                         (warn #.(concatenate 'string
@@ -745,8 +746,8 @@
                         (unread-char c stream)
                         nil)
                        (:eof nil)
-                       (t (%invert-case c)))
-        :with buffer := (if (and prefix (typep prefix 'sequence))
+                       (t c))
+        :with buffer := (if prefix
                             (make-array (length prefix)
                                         :element-type 'character
                                         :adjustable t
@@ -754,7 +755,7 @@
                                         :initial-contents (map 'string #'%invert-case prefix))
                             (make-adjustable-string))
         :while char
-        :do (vector-push-extend char buffer)
+        :do (vector-push-extend (%invert-case char) buffer)
         :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
                                  package))))
 
