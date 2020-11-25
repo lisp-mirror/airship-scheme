@@ -9,6 +9,13 @@
 
 (cl:in-package #:airship-scheme)
 
+;;; Constants for the numeric reader. Flonums (floats) must be read in
+;;; base 10. Integers without a prefix are read in +read-base+, which
+;;; is like CL's *read-base*, but constantly base 10.
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defconstant +read-base+ 10)
+  (defconstant +flonum-base+ 10))
+
 ;;;; Conditions
 
 (define-condition scheme-reader-error (error)
@@ -258,9 +265,11 @@
 
 ;;; Checks the radix if the number is to be read as a flonum.
 (defun check-flonum-radix (radix)
-  (error-unless (= 10 radix)
+  (error-unless (= +flonum-base+ radix)
                 'scheme-reader-error
-                :details "A literal flonum must be in base 10."))
+                :details (format nil
+                                 "A literal flonum must be in base ~D."
+                                 +flonum-base+)))
 
 ;;; Reads the exponent part of a flonum, after the exponent character
 ;;; is read.
@@ -272,7 +281,7 @@
                   'scheme-reader-error
                   :details "An exponent was expected but none was provided")
       (* (coerce number float-type)
-         (expt 10 (* number* sign))))))
+         (expt +flonum-base+ (* number* sign))))))
 
 ;;; Reads the exponent of a flonum.
 (defun read-exponent (number radix stream)
@@ -293,7 +302,7 @@
     (#\.
      (check-flonum-radix radix)
      (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
-       (let ((number (+ number (/ number* (expt 10d0 length*)))))
+       (let ((number (+ number (/ number* (expt (double-float* +flonum-base+) length*)))))
          (read-exponent number radix stream))))
     (:eof number)
     (t
@@ -769,7 +778,7 @@
            (eof-error "after a dot"))
           ((digit-char-p next-char)
            (unread-char match stream)
-           (%read-scheme-number stream 10))
+           (%read-scheme-number stream +flonum-base+))
           ((delimiter? next-char)
            :dot)
           (t
@@ -783,9 +792,11 @@
     (#\( (scheme-read stream :recursive? t))
     (#\) #\))
     (#\" (%read-string stream))
+    ;; Note: If +read-base+ is not constant, then the digit range
+    ;; would depend on it.
     ((:or (:range #\0 #\9) #\- #\+)
      (unread-char match stream)
-     (%read-scheme-number stream 10))
+     (%read-scheme-number stream +read-base+))
     ((:or #\Newline #\Space #\Tab) :skip)
     (#\# (read-special stream))
     (#\' :quote)
