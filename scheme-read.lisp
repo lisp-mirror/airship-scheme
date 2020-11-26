@@ -1,9 +1,5 @@
 ;;;; -*- mode: common-lisp; -*-
 
-;;; TODO: directives (read in `read-special'; replaces all
-;;; %invert-case with fold-case, which has to be done as a string, by
-;;; Unicode's rules!)
-;;;
 ;;; TODO: in `read-special', handle labels (for literal circular/etc.
 ;;; data structures)... e.g. '#1=(1 #1#)
 
@@ -15,6 +11,8 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant +read-base+ 10)
   (defconstant +flonum-base+ 10))
+
+(defparameter *fold-case* nil)
 
 ;;;; Conditions
 
@@ -628,6 +626,19 @@
               (error 'scheme-reader-error
                      :details "Currently, Airship Scheme only supports the required character names."))))))))
 
+(defun %read-directive (stream)
+  (let ((directive (read-scheme-symbol stream :*fold-case* t)))
+    (cond ((eql 'fold-case directive)
+           (setf *fold-case* t)
+           :skip)
+          ((eql 'no-fold-case directive)
+           (setf *fold-case* nil)
+           :skip)
+          (t (error 'scheme-reader-error
+                    :details (format nil
+                                     "Unrecognized directive: #!~A"
+                                     (invert-case (symbol-name directive))))))))
+
 ;;; This is for #-prefixed tokens that are a number or an error.
 (defun %read-special (stream &optional (radix 10))
   (read-case (stream x)
@@ -645,6 +656,9 @@
      (%read-in-base stream 10))
     ((:or #\x #\X)
      (%read-in-base stream 16))
+    (#\!
+     (%read-directive stream))
+    ;; TODO: (:range #\0 #\9)
     (t
      (error 'scheme-reader-error
             :details (format nil "Reader syntax #~A is not supported!" x)))))
@@ -723,7 +737,7 @@
 
 ;;; Reads a Scheme symbol that is escaped with the literal ||
 ;;; notation, like |foo|.
-(defun read-escaped-scheme-symbol (stream &optional (package *package*))
+(defun read-escaped-scheme-symbol (stream &key (package *package*) (*fold-case* *fold-case*))
   (loop :for after-escape? := nil :then escape?
         :for char := (read-case (stream c)
                        (#\| (if after-escape? c nil))
@@ -737,12 +751,16 @@
         :with buffer := (make-adjustable-string)
         :while char
         :unless (not (characterp char))
-          :do (vector-push-extend (%invert-case char) buffer)
-        :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
-                                 package))))
+          :do (vector-push-extend char buffer)
+        :finally (return
+                   (let ((result (subseq buffer 0 (fill-pointer buffer))))
+                     (when *fold-case*
+                       (setf result (string-foldcase result)))
+                     (map-into result #'%invert-case result)
+                     (intern result package)))))
 
 ;;; Reads until the delimiter and turns it into a Scheme symbol.
-(defun read-scheme-symbol (stream &key (package *package*) prefix)
+(defun read-scheme-symbol (stream &key (package *package*) prefix (*fold-case* *fold-case*))
   (check-type prefix sequence)
   (loop :for char := (read-case (stream c)
                        (#\(
@@ -764,9 +782,12 @@
                                         :initial-contents (map 'string #'%invert-case prefix))
                             (make-adjustable-string))
         :while char
-        :do (vector-push-extend (%invert-case char) buffer)
-        :finally (return (intern (subseq buffer 0 (fill-pointer buffer))
-                                 package))))
+        :do (vector-push-extend char buffer)
+        :finally (return (let ((result (subseq buffer 0 (fill-pointer buffer))))
+                           (when *fold-case*
+                             (setf result (string-foldcase result)))
+                           (map-into result #'%invert-case result)
+                           (intern result package)))))
 
 ;;;; Core syntax
 
