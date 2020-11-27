@@ -82,7 +82,22 @@
 (defmacro eof-error (details)
   `(error 'scheme-reader-eof-error :details ,details))
 
-;;;; Common characters
+;;;; Characters and types
+
+(deftype quotation-command ()
+  "Quotation characters are turned into this intermediate format."
+  `(member :quote :quasiquote :unquote :unquote-splicing))
+
+(deftype complex-number-separator ()
+  "
+A complex number is either written in rectangular notation (with
+either + or - as the separator) or in polar notation (with @ as the
+separator).
+"
+  `(member #\+ #\- #\@))
+
+(define-function (complex-number-separator? :inline t) (character)
+  (and (typep character 'complex-number-separator) character))
 
 (deftype delimiter ()
   "Characters, or EOF, that represent a delimiter in Scheme syntax."
@@ -153,7 +168,7 @@
                       (f:with-float-traps-masked t
                         (values (if first? (complex 0 result) result) t))
                       (invalid-infnan-error)))
-                 ((and first? (member next-char '(#\@ #\+ #\-) :test #'char=))
+                 ((and first? (complex-number-separator? next-char))
                   result)
                  (t
                   (invalid-infnan-error)))))
@@ -205,7 +220,7 @@
                      (let ((result (nan 'double-float negate?)))
                        (values (if first? (complex 0 result) result) t)))
                    (invalid-infnan-error)))
-              ((and first? (member next-char '(#\@ #\+ #\-) :test #'char=))
+              ((and first? (complex-number-separator? next-char))
                (nan 'double-float negate?))
               (t
                (%read-final-char (nan (read-exponent* stream) negate?) stream first?)))))))
@@ -248,7 +263,7 @@
                            (let ((result (inf 'double-float negate?)))
                              (values (if first? (complex 0 result) result) t))))
                        (invalid-infnan-error)))
-                  ((and first? (member next-char '(#\@ #\+ #\-) :test #'char=))
+                  ((and first? (complex-number-separator? next-char))
                    (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
                      (inf 'double-float negate?)))
                   (t
@@ -896,7 +911,7 @@
                          :details "An expression needs an item after the dot in a dotted list"))
                  (t nil)))
          (possibly-quote (match)
-           (if (member match '(:quote :quasiquote :unquote :unquote-splicing))
+           (if (typep match 'quotation-command)
                (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t))
                      (match* (ecase match
                                (:quote 'quote)
