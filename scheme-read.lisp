@@ -823,10 +823,14 @@ separator).
 
 ;;; Reads a character and determines what to do with it based on the
 ;;; Scheme syntax specification.
-(defun read-scheme-character* (stream)
+(defun read-scheme-character* (inside-list? stream)
   (read-case (stream match)
     (#\( (scheme-read stream :recursive? t))
-    (#\) #\))
+    (#\)
+     (error-when (not inside-list?)
+                 'scheme-reader-error
+                 :details "Imbalanced parentheses")
+     #\))
     (#\" (%read-string stream))
     ;; Note: If +read-base+ is not constant, then the digit range
     ;; would depend on it.
@@ -844,7 +848,11 @@ separator).
              :unquote))
     (#\; (read-line-comment stream))
     (#\| (read-escaped-scheme-symbol stream))
-    (:eof :eof)
+    (:eof
+     (error-when inside-list?
+                 'scheme-reader-error
+                 :details "Imbalanced parentheses")
+     :eof)
     (#\. (read-scheme-dot match stream))
     ((:or :nd :mc :me)
      ;; Note: Many Schemes disregard this rule, but this is mandated
@@ -855,22 +863,22 @@ separator).
      (read-scheme-symbol stream))))
 
 ;;; Handles the #;-style comments for `read-scheme-character'.
-(defun comment-next-form (stream)
-  (let ((skipped-read (read-scheme-character stream)))
+(defun comment-next-form (inside-list? stream)
+  (let ((skipped-read (read-scheme-character inside-list? stream)))
     (case skipped-read
       (:dot (error 'scheme-reader-error
                    :details "Attempted to comment out a dot."))
       (#\) (error 'scheme-reader-error
                   :details "Expected to skip a token to match a #;-style comment, but none found."))
       (:eof (eof-error "after a #;-style comment"))))
-  (read-scheme-character stream))
+  (read-scheme-character inside-list? stream))
 
 ;;; Wraps around `read-scheme-character*' to handle a few special
 ;;; cases, like #;-style comments.
-(defun read-scheme-character (stream)
-  (loop :for match := (let ((match* (read-scheme-character* stream)))
+(defun read-scheme-character (inside-list? stream)
+  (loop :for match := (let ((match* (read-scheme-character* inside-list? stream)))
                         (if (eql match* :skip-next)
-                            (comment-next-form stream)
+                            (comment-next-form inside-list? stream)
                             match*))
         :while (eql match :skip)
         :finally (return match)))
@@ -890,8 +898,7 @@ separator).
                               :details "An expression needs an item before the dot in a dotted list"))
                       (t t))))
          (end-of-read? (match)
-           (or (and recursive?
-                    (eql match #\)))
+           (or (eql match #\))
                (eql match :eof)))
          (check-dot (dotted-end? match)
            (cond (dotted-end?
@@ -901,15 +908,10 @@ separator).
                   (error 'scheme-reader-error
                          :details "More than one dot inside of a dotted list"))
                  (t nil)))
-         (check-end (old match after-dotted? dotted-end?)
-           (cond ((or (and recursive? (eql match :eof))
-                      (and (not recursive?) (eql old #\))))
-                  (error 'scheme-reader-error
-                         :details "Imbalanced parentheses"))
-                 ((and after-dotted? (not dotted-end?))
-                  (error 'scheme-reader-error
-                         :details "An expression needs an item after the dot in a dotted list"))
-                 (t nil)))
+         (check-end (after-dotted? dotted-end?)
+           (error-when (and after-dotted? (not dotted-end?))
+                       'scheme-reader-error
+                       :details "An expression needs an item after the dot in a dotted list"))
          (possibly-quote (match)
            (if (typep match 'quotation-command)
                (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t))
@@ -926,13 +928,9 @@ separator).
                  `(,match* ,@quoted))
                match)))
     (loop :with limit* :of-type (maybe a:non-negative-fixnum) := limit
-          :for old := nil :then (if (and match
-                                         (not (eql match :dot)))
-                                    match
-                                    old)
           :for match := (if (and limit (zerop limit*))
                             :skip
-                            (read-scheme-character stream))
+                            (read-scheme-character recursive? stream))
           :for after-dotted? := nil :then (or dotted? after-dotted?)
           :for dotted? := (dotted? match s-expression)
           :with dotted-end := nil
@@ -955,7 +953,7 @@ separator).
              ;; when building proper lists?
              (return
                (progn
-                 (check-end old match after-dotted? dotted-end)
+                 (check-end after-dotted? dotted-end)
                  (if dotted-end
                      (progn
                        (setf (cdr (last s-expression)) (car dotted-end))
