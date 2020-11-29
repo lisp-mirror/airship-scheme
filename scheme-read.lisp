@@ -84,10 +84,6 @@
 
 ;;;; Characters and types
 
-(deftype quotation-command ()
-  "Quotation characters are turned into this intermediate format."
-  `(member :quote :quasiquote :unquote :unquote-splicing))
-
 (deftype complex-number-separator ()
   "
 A complex number is either written in rectangular notation (with
@@ -821,15 +817,24 @@ separator).
            (unread-char match stream)
            (read-scheme-symbol stream)))))
 
+(defun read-quoted (quote-name inside-list? stream)
+  (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t)))
+    (when (endp quoted)
+      (if inside-list?
+          (error 'scheme-reader-error
+                 :details "Nothing quoted!")
+          (eof-error "after a quote")))
+    `(,quote-name ,@quoted)))
+
 ;;; Reads a character and determines what to do with it based on the
 ;;; Scheme syntax specification.
 (defun read-scheme-character* (inside-list? stream)
   (read-case (stream match)
     (#\( (scheme-read stream :recursive? t))
     (#\)
-     (error-when (not inside-list?)
-                 'scheme-reader-error
-                 :details "Imbalanced parentheses")
+     (error-unless inside-list?
+                   'scheme-reader-error
+                   :details "Imbalanced parentheses")
      #\))
     (#\" (%read-string stream))
     ;; Note: If +read-base+ is not constant, then the digit range
@@ -839,13 +844,15 @@ separator).
      (%read-scheme-number stream +read-base+))
     ((:or #\Newline #\Space #\Tab) :skip)
     (#\# (read-special stream))
-    (#\' :quote)
-    (#\` :quasiquote)
-    (#\, (if (eql #\@ (peek-char* stream))
-             (progn
-               (skip-read-char stream)
-               :unquote-splicing)
-             :unquote))
+    (#\' (read-quoted 'quote inside-list? stream))
+    (#\` (read-quoted 'quasiquote inside-list? stream))
+    (#\, (read-quoted (if (eql #\@ (peek-char* stream))
+                          (progn
+                            (skip-read-char stream)
+                            'unquote-splicing)
+                          'unquote)
+                      inside-list?
+                      stream))
     (#\; (read-line-comment stream))
     (#\| (read-escaped-scheme-symbol stream))
     (:eof
@@ -911,22 +918,7 @@ separator).
          (check-end (after-dotted? dotted-end?)
            (error-when (and after-dotted? (not dotted-end?))
                        'scheme-reader-error
-                       :details "An expression needs an item after the dot in a dotted list"))
-         (possibly-quote (match)
-           (if (typep match 'quotation-command)
-               (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t))
-                     (match* (ecase match
-                               (:quote 'quote)
-                               (:quasiquote 'quasiquote)
-                               (:unquote 'unquote)
-                               (:unquote-splicing 'unquote-splicing))))
-                 (when (endp quoted)
-                   (if recursive?
-                       (error 'scheme-reader-error
-                              :details "Nothing quoted!")
-                       (eof-error "after a quote")))
-                 `(,match* ,@quoted))
-               match)))
+                       :details "An expression needs an item after the dot in a dotted list")))
     (loop :with limit* :of-type (maybe a:non-negative-fixnum) := limit
           :for match := (if (and limit (zerop limit*))
                             :skip
@@ -940,8 +932,7 @@ separator).
                    (not dotted?)
                    (not after-dotted?))
             :do (when limit* (decf limit*))
-            :and
-              :collect (possibly-quote match) :into s-expression
+            :and :collect match :into s-expression
           :else
             :if (and (not (eql match :skip)) after-dotted?)
               :do (progn
