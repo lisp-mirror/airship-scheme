@@ -804,7 +804,7 @@ separator).
 
 ;;; A dot can represent a possible number (if not, it's a symbol), a
 ;;; part of a dotted list, or the start of a symbol.
-(defun read-scheme-dot (match stream)
+(defun read-scheme-dot (match inside-list? quoted? first? stream)
   (let ((next-char (peek-char* stream)))
     (cond ((eql :eof next-char)
            (eof-error "after a dot"))
@@ -812,6 +812,15 @@ separator).
            (unread-char match stream)
            (%read-scheme-number stream +flonum-base+))
           ((delimiter? next-char)
+           (error-unless inside-list?
+                         'scheme-reader-error
+                         :details "The dotted list syntax must be used inside of a list")
+           (error-when quoted?
+                       'scheme-reader-error
+                       :details "A dot cannot follow a quote")
+           (error-when first?
+                       'scheme-reader-error
+                       :details "An expression needs an item before the dot in a dotted list")
            :dot)
           (t
            (unread-char match stream)
@@ -828,7 +837,7 @@ separator).
 
 ;;; Reads a character and determines what to do with it based on the
 ;;; Scheme syntax specification.
-(defun read-scheme-character* (inside-list? stream)
+(defun read-scheme-character* (inside-list? quoted? first? stream)
   (read-case (stream match)
     (#\( (scheme-read stream :recursive? t))
     (#\)
@@ -860,7 +869,7 @@ separator).
                  'scheme-reader-error
                  :details "Imbalanced parentheses")
      :eof)
-    (#\. (read-scheme-dot match stream))
+    (#\. (read-scheme-dot match inside-list? quoted? first? stream))
     ((:or :nd :mc :me)
      ;; Note: Many Schemes disregard this rule, but this is mandated
      ;; by section 7.1.1 of r7rs.pdf.
@@ -870,41 +879,29 @@ separator).
      (read-scheme-symbol stream))))
 
 ;;; Handles the #;-style comments for `read-scheme-character'.
-(defun comment-next-form (inside-list? stream)
-  (let ((skipped-read (read-scheme-character inside-list? stream)))
+(defun comment-next-form (inside-list? quoted? first? stream)
+  (let ((skipped-read (read-scheme-character inside-list? quoted? first? stream)))
     (case skipped-read
       (:dot (error 'scheme-reader-error
                    :details "Attempted to comment out a dot."))
       (#\) (error 'scheme-reader-error
                   :details "Expected to skip a token to match a #;-style comment, but none found."))
       (:eof (eof-error "after a #;-style comment"))))
-  (read-scheme-character inside-list? stream))
+  (read-scheme-character inside-list? quoted? first? stream))
 
 ;;; Wraps around `read-scheme-character*' to handle a few special
 ;;; cases, like #;-style comments.
-(defun read-scheme-character (inside-list? stream)
-  (loop :for match := (let ((match* (read-scheme-character* inside-list? stream)))
+(defun read-scheme-character (inside-list? quoted? first? stream)
+  (loop :for match := (let ((match* (read-scheme-character* inside-list? quoted? first? stream)))
                         (if (eql match* :skip-next)
-                            (comment-next-form inside-list? stream)
+                            (comment-next-form inside-list? quoted? first? stream)
                             match*))
         :while (eql match :skip)
         :finally (return match)))
 
 (defun scheme-read (stream &key recursive? quoted? limit)
   (check-type limit (maybe a:non-negative-fixnum))
-  (flet ((dotted? (match s-expression)
-           (and (eql match :dot)
-                (cond (quoted?
-                       (error 'scheme-reader-error
-                              :details "A dot cannot follow a quote"))
-                      ((not recursive?)
-                       (error 'scheme-reader-error
-                              :details "The dotted list syntax must be used inside of a list"))
-                      ((not s-expression)
-                       (error 'scheme-reader-error
-                              :details "An expression needs an item before the dot in a dotted list"))
-                      (t t))))
-         (end-of-read? (match)
+  (flet ((end-of-read? (match)
            (or (eql match #\))
                (eql match :eof)))
          (check-dot (dotted-end? match)
@@ -922,9 +919,9 @@ separator).
     (loop :with limit* :of-type (maybe a:non-negative-fixnum) := limit
           :for match := (if (and limit (zerop limit*))
                             :skip
-                            (read-scheme-character recursive? stream))
+                            (read-scheme-character recursive? quoted? (not s-expression) stream))
           :for after-dotted? := nil :then (or dotted? after-dotted?)
-          :for dotted? := (dotted? match s-expression)
+          :for dotted? := (eql match :dot)
           :with dotted-end := nil
           :until (or (and limit* (zerop limit*))
                      (end-of-read? match))
