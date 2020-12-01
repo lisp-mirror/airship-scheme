@@ -675,7 +675,7 @@ separator).
             :details (format nil "Reader syntax #~A is not supported!" x)))))
 
 (defun %read-bytevector* (stream)
-  (handler-case (coerce (scheme-read stream :recursive? t) 'bytevector?)
+  (handler-case (coerce (read-scheme-list stream) 'bytevector?)
     (type-error (c)
       (error 'scheme-type-error
              :details "in reading a bytevector"
@@ -737,7 +737,7 @@ separator).
     (#\\
      (%read-literal-character stream))
     (#\(
-     (coerce (scheme-read stream :recursive? t) 'vector?))
+     (coerce (read-scheme-list stream) 'vector?))
     (#\;
      :skip-next)
     (:eof
@@ -805,6 +805,9 @@ separator).
 ;;; A dot can represent a possible number (if not, it's a symbol), a
 ;;; part of a dotted list, or the start of a symbol.
 (defun read-scheme-dot (match inside-list? quoted? first? stream)
+  (error-unless inside-list?
+                'scheme-reader-error
+                :details "The dotted list syntax must be used inside of a list")
   (let ((next-char (peek-char* stream)))
     (cond ((eql :eof next-char)
            (eof-error "after a dot"))
@@ -812,12 +815,9 @@ separator).
            (unread-char match stream)
            (%read-scheme-number stream +flonum-base+))
           ((delimiter? next-char)
-           (error-unless inside-list?
-                         'scheme-reader-error
-                         :details "The dotted list syntax must be used inside of a list")
            (error-when quoted?
                        'scheme-reader-error
-                       :details "A dot cannot follow a quote")
+                       :details "A dot cannot directly follow a quote")
            (error-when first?
                        'scheme-reader-error
                        :details "An expression needs an item before the dot in a dotted list")
@@ -826,20 +826,24 @@ separator).
            (unread-char match stream)
            (read-scheme-symbol stream)))))
 
-(defun read-quoted (quote-name inside-list? stream)
-  (let ((quoted (scheme-read stream :limit 1 :quoted? t :recursive? t)))
-    (when (endp quoted)
-      (if inside-list?
-          (error 'scheme-reader-error
-                 :details "Nothing quoted!")
-          (eof-error "after a quote")))
-    `(,quote-name ,@quoted)))
+(defun read-quoted (quote-name inside-list? first? stream)
+  (let ((quoted (read-scheme-character stream
+                                       :inside-list? inside-list?
+                                       :quoted? t
+                                       :first? first?)))
+    (error-when (and inside-list? (eql quoted #\)))
+                'scheme-reader-error
+                :details "Nothing quoted!")
+    (error-when (eql quoted :eof)
+                'scheme-reader-eof-error
+                :details "after a quote")
+    `(,quote-name ,quoted)))
 
 ;;; Reads a character and determines what to do with it based on the
 ;;; Scheme syntax specification.
 (defun read-scheme-character* (inside-list? quoted? first? stream)
   (read-case (stream match)
-    (#\( (scheme-read stream :recursive? t))
+    (#\( (read-scheme-list stream))
     (#\)
      (error-unless inside-list?
                    'scheme-reader-error
@@ -853,14 +857,15 @@ separator).
      (%read-scheme-number stream +read-base+))
     ((:or #\Newline #\Space #\Tab) :skip)
     (#\# (read-special stream))
-    (#\' (read-quoted 'quote inside-list? stream))
-    (#\` (read-quoted 'quasiquote inside-list? stream))
+    (#\' (read-quoted 'quote inside-list? first? stream))
+    (#\` (read-quoted 'quasiquote inside-list? first? stream))
     (#\, (read-quoted (if (eql #\@ (peek-char* stream))
                           (progn
                             (skip-read-char stream)
                             'unquote-splicing)
                           'unquote)
                       inside-list?
+                      first?
                       stream))
     (#\; (read-line-comment stream))
     (#\| (read-escaped-scheme-symbol stream))
@@ -880,18 +885,21 @@ separator).
 
 ;;; Handles the #;-style comments for `read-scheme-character'.
 (defun comment-next-form (inside-list? quoted? first? stream)
-  (let ((skipped-read (read-scheme-character inside-list? quoted? first? stream)))
+  (let ((skipped-read (read-scheme-character stream
+                                             :inside-list? inside-list?
+                                             :quoted? quoted?
+                                             :first? first?)))
     (case skipped-read
       (:dot (error 'scheme-reader-error
                    :details "Attempted to comment out a dot."))
       (#\) (error 'scheme-reader-error
                   :details "Expected to skip a token to match a #;-style comment, but none found."))
       (:eof (eof-error "after a #;-style comment"))))
-  (read-scheme-character inside-list? quoted? first? stream))
+  (read-scheme-character stream :inside-list? inside-list? :quoted? quoted? :first? first?))
 
 ;;; Wraps around `read-scheme-character*' to handle a few special
 ;;; cases, like #;-style comments.
-(defun read-scheme-character (inside-list? quoted? first? stream)
+(defun read-scheme-character (stream &key inside-list? quoted? first?)
   (loop :for match := (let ((match* (read-scheme-character* inside-list? quoted? first? stream)))
                         (if (eql match* :skip-next)
                             (comment-next-form inside-list? quoted? first? stream)
@@ -899,20 +907,16 @@ separator).
         :while (eql match :skip)
         :finally (return match)))
 
-(defun scheme-read (stream &key recursive? quoted? limit)
-  (check-type limit (maybe a:non-negative-fixnum))
-  (loop :with limit* :of-type (maybe a:non-negative-fixnum) := limit
-        :with s-expression := (list)
+(defun read-scheme-list (stream)
+  (loop :with s-expression := (list)
         :with last := (list)
-        :for match := (if (and limit (zerop limit*))
-                          :skip
-                          (read-scheme-character recursive? quoted? (not s-expression) stream))
+        :for match := (read-scheme-character stream
+                                             :inside-list? t
+                                             :first? (endp s-expression))
         :for after-dot? := nil :then (or dot? after-dot?)
         :for dot? := (eql match :dot)
         :with already-dotted? := nil
-        :until (or (eql match #\))
-                   (eql match :eof)
-                   (and limit* (zerop limit*)))
+        :until (eql match #\))
         :do
            (unless (eql match :skip)
              (error-when (and after-dot? dot?)
@@ -922,7 +926,6 @@ separator).
                (error-when already-dotted?
                            'scheme-reader-error
                            :details "More than one item after a dot in a dotted list")
-               (when limit* (decf limit*))
                (let ((new-cons (if after-dot?
                                    (progn
                                      (setf already-dotted? t)
@@ -931,10 +934,17 @@ separator).
                  (setf last
                        (if (endp s-expression)
                            (setf s-expression new-cons)
-                           (nconc last new-cons))))))
+                           (progn
+                             (nconc last new-cons)
+                             new-cons))))))
         :finally
            (progn
              (error-when (and after-dot? (not already-dotted?))
                          'scheme-reader-error
                          :details "An expression needs an item after the dot in a dotted list")
              (return s-expression))))
+
+(defun scheme-read (stream)
+  (loop :for match := (read-scheme-character stream)
+        :until (eql match :eof)
+        :collect match))
