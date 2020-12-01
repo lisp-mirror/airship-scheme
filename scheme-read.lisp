@@ -901,49 +901,40 @@ separator).
 
 (defun scheme-read (stream &key recursive? quoted? limit)
   (check-type limit (maybe a:non-negative-fixnum))
-  (flet ((end-of-read? (match)
-           (or (eql match #\))
-               (eql match :eof)))
-         (check-dot (dotted-end? match)
-           (cond (dotted-end?
-                  (error 'scheme-reader-error
-                         :details "More than one item after a dot in a dotted list"))
-                 ((eql match :dot)
-                  (error 'scheme-reader-error
-                         :details "More than one dot inside of a dotted list"))
-                 (t nil)))
-         (check-end (after-dotted? dotted-end?)
-           (error-when (and after-dotted? (not dotted-end?))
-                       'scheme-reader-error
-                       :details "An expression needs an item after the dot in a dotted list")))
-    (loop :with limit* :of-type (maybe a:non-negative-fixnum) := limit
-          :for match := (if (and limit (zerop limit*))
-                            :skip
-                            (read-scheme-character recursive? quoted? (not s-expression) stream))
-          :for after-dotted? := nil :then (or dotted? after-dotted?)
-          :for dotted? := (eql match :dot)
-          :with dotted-end := nil
-          :until (or (and limit* (zerop limit*))
-                     (end-of-read? match))
-          :if (and (not (eql match :skip))
-                   (not dotted?)
-                   (not after-dotted?))
-            :do (when limit* (decf limit*))
-            :and :collect match :into s-expression
-          :else
-            :if (and (not (eql match :skip)) after-dotted?)
-              :do (progn
-                    (check-dot dotted-end match)
-                    (setf dotted-end (list match)))
-          :finally
-             ;; Note: This isn't an efficient way to make a dotted
-             ;; list, but is the efficient way worth the added cost
-             ;; when building proper lists?
-             (return
-               (progn
-                 (check-end after-dotted? dotted-end)
-                 (if dotted-end
-                     (progn
-                       (setf (cdr (last s-expression)) (car dotted-end))
-                       s-expression)
-                     s-expression))))))
+  (loop :with limit* :of-type (maybe a:non-negative-fixnum) := limit
+        :with s-expression := (list)
+        :with last := (list)
+        :for match := (if (and limit (zerop limit*))
+                          :skip
+                          (read-scheme-character recursive? quoted? (not s-expression) stream))
+        :for after-dot? := nil :then (or dot? after-dot?)
+        :for dot? := (eql match :dot)
+        :with already-dotted? := nil
+        :until (or (eql match #\))
+                   (eql match :eof)
+                   (and limit* (zerop limit*)))
+        :do
+           (unless (eql match :skip)
+             (error-when (and after-dot? dot?)
+                         'scheme-reader-error
+                         :details "More than one dot inside of a dotted list")
+             (unless dot?
+               (error-when already-dotted?
+                           'scheme-reader-error
+                           :details "More than one item after a dot in a dotted list")
+               (when limit* (decf limit*))
+               (let ((new-cons (if after-dot?
+                                   (progn
+                                     (setf already-dotted? t)
+                                     match)
+                                   (list match))))
+                 (setf last
+                       (if (endp s-expression)
+                           (setf s-expression new-cons)
+                           (nconc last new-cons))))))
+        :finally
+           (progn
+             (error-when (and after-dot? (not already-dotted?))
+                         'scheme-reader-error
+                         :details "An expression needs an item after the dot in a dotted list")
+             (return s-expression))))
