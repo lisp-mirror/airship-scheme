@@ -3,16 +3,32 @@
 ;;; TODO: in `read-special', handle labels (for literal circular/etc.
 ;;; data structures)... e.g. '#1=(1 #1#)
 
+;;; Note: This uses :SKIP and :EOF as special symbols. When this
+;;; Scheme is extended to support CL-style keyword syntax, these will
+;;; have to be renamed to avoid confusion with reading the actual
+;;; keywords :SKIP and :EOF.
+
 (cl:in-package #:airship-scheme)
 
-;;; Constants for the numeric reader. Flonums (floats) must be read in
-;;; base 10. Integers without a prefix are read in +read-base+, which
-;;; is like CL's *read-base*, but constantly base 10.
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defconstant +read-base+ 10)
-  (defconstant +flonum-base+ 10))
+  (defconstant +read-base+ 10
+    "
+Integers are read in +read-base+ unless a prefix specifies otherwise.
+This is similar to CL's *read-base*, but is a constant. This might be
+replaced with a variable in the future.
+")
+  (defconstant +flonum-base+ 10
+    "Flonums (floating point numbers) must always be in base 10."))
 
-(defparameter *fold-case* nil)
+(defparameter *fold-case* nil
+  "
+Determines if `string-foldcase' should be applied by default or not.
+
+Note that this is different than the case-inversion that is always
+done for compatibility with the upcasing reader of Common Lisp. That
+one is done character-by-character and does not apply to most of
+Unicode, but is (hopefully) always reversible, unlike Unicode.
+")
 
 ;;;; Conditions
 
