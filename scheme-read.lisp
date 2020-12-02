@@ -713,8 +713,22 @@ separator).
     (t (error 'scheme-reader-error
               :details (format nil "#u8 expected, but #u~A was read." character)))))
 
+;;; Handles the #;-style comments for `read-scheme-character'.
+(defun comment-next-form (inside-list? quoted? first? stream)
+  (let ((skipped-read (read-scheme stream
+                                   :inside-list? inside-list?
+                                   :quoted? quoted?
+                                   :first? first?)))
+    (case skipped-read
+      (:dot (error 'scheme-reader-error
+                   :details "Attempted to comment out a dot."))
+      (#\) (error 'scheme-reader-error
+                  :details "Expected to skip a token to match a #;-style comment, but none found."))
+      (:eof (eof-error "after a #;-style comment"))))
+  (read-scheme stream :inside-list? inside-list? :quoted? quoted? :first? first?))
+
 ;;; Reads a token that starts with a # (hashtag).
-(defun read-special (stream)
+(defun read-special (inside-list? quoted? first? stream)
   (read-case (stream x)
     (#\|
      (read-block-comment stream))
@@ -739,7 +753,7 @@ separator).
     (#\(
      (coerce (read-scheme-list stream) 'vector?))
     (#\;
-     :skip-next)
+     (comment-next-form inside-list? quoted? first? stream))
     (:eof
      (eof-error "after a # when a character was expected"))
     (t
@@ -827,10 +841,10 @@ separator).
            (read-scheme-symbol stream)))))
 
 (defun read-quoted (quote-name inside-list? first? stream)
-  (let ((quoted (read-scheme-character stream
-                                       :inside-list? inside-list?
-                                       :quoted? t
-                                       :first? first?)))
+  (let ((quoted (read-scheme stream
+                             :inside-list? inside-list?
+                             :quoted? t
+                             :first? first?)))
     (error-when (and inside-list? (eql quoted #\)))
                 'scheme-reader-error
                 :details "Nothing quoted!")
@@ -841,7 +855,7 @@ separator).
 
 ;;; Reads a character and determines what to do with it based on the
 ;;; Scheme syntax specification.
-(defun read-scheme-character* (inside-list? quoted? first? stream)
+(defun %read-scheme-character (inside-list? quoted? first? stream)
   (read-case (stream match)
     (#\( (read-scheme-list stream))
     (#\)
@@ -856,7 +870,7 @@ separator).
      (unread-char match stream)
      (%read-scheme-number stream +read-base+))
     ((:or #\Newline #\Space #\Tab) :skip)
-    (#\# (read-special stream))
+    (#\# (read-special inside-list? quoted? first? stream))
     (#\' (read-quoted 'quote inside-list? first? stream))
     (#\` (read-quoted 'quasiquote inside-list? first? stream))
     (#\, (read-quoted (if (eql #\@ (peek-char* stream))
@@ -883,42 +897,19 @@ separator).
      (unread-char match stream)
      (read-scheme-symbol stream))))
 
-;;; Handles the #;-style comments for `read-scheme-character'.
-(defun comment-next-form (inside-list? quoted? first? stream)
-  (let ((skipped-read (read-scheme-character stream
-                                             :inside-list? inside-list?
-                                             :quoted? quoted?
-                                             :first? first?)))
-    (case skipped-read
-      (:dot (error 'scheme-reader-error
-                   :details "Attempted to comment out a dot."))
-      (#\) (error 'scheme-reader-error
-                  :details "Expected to skip a token to match a #;-style comment, but none found."))
-      (:eof (eof-error "after a #;-style comment"))))
-  (read-scheme-character stream :inside-list? inside-list? :quoted? quoted? :first? first?))
-
-;;; Wraps around `read-scheme-character*' to handle a few special
-;;; cases, like #;-style comments.
-(defun read-scheme-character (stream &key inside-list? quoted? first?)
-  (loop :for match := (let ((match* (read-scheme-character* inside-list? quoted? first? stream)))
-                        (if (eql match* :skip-next)
-                            (comment-next-form inside-list? quoted? first? stream)
-                            match*))
-        :while (eql match :skip)
-        :finally (return match)))
-
 (defun read-scheme-list (stream)
+  "Reads a list, with special handling of the dotted list syntax."
   (loop :with s-expression := (list)
         :with last := (list)
-        :for match := (read-scheme-character stream
-                                             :inside-list? t
-                                             :first? (endp s-expression))
+        :for match := (read-scheme stream
+                                   :inside-list? t
+                                   :first? (endp s-expression))
         :for after-dot? := nil :then (or dot? after-dot?)
         :for dot? := (eql match :dot)
         :with already-dotted? := nil
         :until (eql match #\))
         :do
-           (unless (eql match :skip)
+           (progn
              (error-when (and after-dot? dot?)
                          'scheme-reader-error
                          :details "More than one dot inside of a dotted list")
@@ -944,7 +935,19 @@ separator).
                          :details "An expression needs an item after the dot in a dotted list")
              (return s-expression))))
 
-(defun scheme-read (stream)
-  (loop :for match := (read-scheme-character stream)
+(defun read-scheme (stream &key inside-list? quoted? first?)
+  "An implementation of Scheme's read procedure."
+  (loop :for match := (%read-scheme-character inside-list? quoted? first? stream)
+        :while (eql match :skip)
+        :finally (return match)))
+
+(defun read-scheme-file (stream)
+  "
+Reads an entire file from a stream into a list using the Scheme
+reader. It takes a stream rather than a file pathname so it should be
+able to handle other file-like streams as well, such as a stream from
+`with-input-from-string'.
+"
+  (loop :for match := (read-scheme stream)
         :until (eql match :eof)
         :collect match))
