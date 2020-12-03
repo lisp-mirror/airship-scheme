@@ -1,8 +1,5 @@
 ;;;; -*- mode: common-lisp; -*-
 
-;;; TODO: in `read-special', handle labels (for literal circular/etc.
-;;; data structures)... e.g. '#1=(1 #1#)
-
 ;;; Note: This uses :SKIP and :EOF as special symbols. When this
 ;;; Scheme is extended to support CL-style keyword syntax, these will
 ;;; have to be renamed to avoid confusion with reading the actual
@@ -402,7 +399,7 @@ separator).
            (let ((sign-prefix (%read-sign stream))
                  (next-char (peek-char* stream)))
              (if (delimiter? next-char)
-                 sign-prefix
+                 (intern (string sign-prefix))
                  (%read-infnan-or-regular-number t next-char radix sign-prefix stream no-symbol?))))
          ;; Note: Ending in a delimiter means there is no second part.
          ;; Ending in an #\i means that the "first" part was really
@@ -460,7 +457,7 @@ separator).
          (possible-number (if (eql next-char #\#)
                               (progn
                                 (skip-read-char stream)
-                                (%read-special stream radix))
+                                (%read-special stream :radix radix))
                               (%read-scheme-number stream radix t))))
     (if (numberp possible-number)
         possible-number
@@ -667,7 +664,7 @@ separator).
                                      (invert-case (symbol-name directive))))))))
 
 ;;; This is for #-prefixed tokens that are a number or an error.
-(defun %read-special (stream &optional (radix 10))
+(defun %read-special (stream &key (radix 10) first? inside-list? quoted? labels)
   (read-case (stream x)
     ((:or #\e #\E)
      (let ((read-base (%find-read-base stream radix)))
@@ -685,13 +682,50 @@ separator).
      (%read-in-base stream 16))
     (#\!
      (%read-directive stream))
-    ;; TODO: (:range #\0 #\9)
+    ((:range #\0 #\9)
+     (unread-char x stream)
+     (let ((label-id (read-scheme-integer stream 10)))
+       (read-case (stream x)
+         (#\=
+          (unless labels
+            (setf labels (make-hash-table)))
+          (error-when (hash-table-value-present? label-id labels)
+                      'scheme-reader-error
+                      :details (format nil "The label ~D appears more than once" label-id))
+          (let ((labeled (read-scheme stream
+                             :inside-list? inside-list?
+                             :quoted? quoted?
+                             :first? first?
+                             :labels labels)))
+            (error-when (eql labeled :dot)
+                        'scheme-reader-error
+                        :details "Attempted to label a dot")
+            (error-when (eql labeled :eof)
+                        'scheme-reader-eof-error
+                        :details "when expecting something to label")
+            (error-when (eql labeled #\))
+                        'scheme-reader-error
+                        :details "Nothing left in list to label")
+            (setf (gethash label-id labels) labeled)))
+         (#\#
+          (error-unless (%delimiter? stream)
+                        'scheme-reader-error
+                        :details "Invalid label syntax")
+          (error-unless (hash-table-value-present? label-id labels)
+                        'scheme-reader-error
+                        :details (format nil "Attempted to use label ~D before defining it" label-id))
+          (gethash label-id labels))
+         (:eof
+          (eof-error "in the middle of a label"))
+         (t
+          (error 'scheme-reader-error
+                 :details "Invalid label syntax")))))
     (t
      (error 'scheme-reader-error
             :details (format nil "Reader syntax #~A is not supported!" x)))))
 
-(defun %read-bytevector* (stream)
-  (handler-case (coerce (read-scheme-list stream) 'bytevector?)
+(defun %read-bytevector* (labels stream)
+  (handler-case (coerce (read-scheme-list stream :labels labels) 'bytevector?)
     (type-error (c)
       (error 'scheme-type-error
              :details "in reading a bytevector"
@@ -711,7 +745,7 @@ separator).
 ;;; this by adding the following to your .emacs file:
 ;;;
 ;;;   (setq paredit-space-for-delimiter-predicates '((lambda (endp delimiter) nil)))
-(defun %read-bytevector (stream)
+(defun %read-bytevector (labels stream)
   (read-case (stream character)
     (#\8 (loop :with whitespace? := nil
                :for c := (read-case (stream c)
@@ -724,27 +758,32 @@ separator).
                            (t (error 'scheme-reader-error
                                      :details (format nil "\"(\" expected, but ~A was read." c))))
                :until c
-               :finally (return (%read-bytevector* stream))))
+               :finally (return (%read-bytevector* labels stream))))
     (:eof (eof-error "after #u when an 8 was expected"))
     (t (error 'scheme-reader-error
               :details (format nil "#u8 expected, but #u~A was read." character)))))
 
 ;;; Handles the #;-style comments for `read-scheme-character'.
-(defun comment-next-form (inside-list? quoted? first? stream)
+(defun comment-next-form (inside-list? quoted? first? labels stream)
   (let ((skipped-read (read-scheme stream
                                    :inside-list? inside-list?
                                    :quoted? quoted?
-                                   :first? first?)))
+                                   :first? first?
+                                   :labels labels)))
     (case skipped-read
       (:dot (error 'scheme-reader-error
                    :details "Attempted to comment out a dot."))
       (#\) (error 'scheme-reader-error
                   :details "Expected to skip a token to match a #;-style comment, but none found."))
       (:eof (eof-error "after a #;-style comment"))))
-  (read-scheme stream :inside-list? inside-list? :quoted? quoted? :first? first?))
+  (read-scheme stream
+               :inside-list? inside-list?
+               :quoted? quoted?
+               :first? first?
+               :labels labels))
 
 ;;; Reads a token that starts with a # (hashtag).
-(defun read-special (inside-list? quoted? first? stream)
+(defun read-special (inside-list? quoted? first? labels stream)
   (read-case (stream x)
     (#\|
      (read-block-comment stream))
@@ -763,18 +802,22 @@ separator).
          (error 'scheme-reader-error
                 :details "Invalid character(s) after #f")))
     ((:or #\u #\U)
-     (%read-bytevector stream))
+     (%read-bytevector labels stream))
     (#\\
      (%read-literal-character stream))
     (#\(
-     (coerce (read-scheme-list stream) 'vector?))
+     (coerce (read-scheme-list stream :labels labels) 'vector?))
     (#\;
-     (comment-next-form inside-list? quoted? first? stream))
+     (comment-next-form inside-list? quoted? first? labels stream))
     (:eof
      (eof-error "after a # when a character was expected"))
     (t
      (unread-char x stream)
-     (%read-special stream))))
+     (%read-special stream
+                    :first? first?
+                    :inside-list? inside-list?
+                    :quoted? quoted?
+                    :labels labels))))
 
 ;;; Reads a Scheme symbol that is escaped with the literal ||
 ;;; notation, like |foo|.
@@ -856,11 +899,12 @@ separator).
            (unread-char match stream)
            (read-scheme-symbol stream)))))
 
-(defun read-quoted (quote-name inside-list? first? stream)
+(defun read-quoted (quote-name inside-list? first? labels stream)
   (let ((quoted (read-scheme stream
                              :inside-list? inside-list?
                              :quoted? t
-                             :first? first?)))
+                             :first? first?
+                             :labels labels)))
     (error-when (and inside-list? (eql quoted #\)))
                 'scheme-reader-error
                 :details "Nothing quoted!")
@@ -871,9 +915,9 @@ separator).
 
 ;;; Reads a character and determines what to do with it based on the
 ;;; Scheme syntax specification.
-(defun %read-scheme-character (inside-list? quoted? first? stream)
+(defun %read-scheme-character (inside-list? quoted? first? labels stream)
   (read-case (stream match)
-    (#\( (read-scheme-list stream))
+    (#\( (read-scheme-list stream :labels labels))
     (#\)
      (error-unless inside-list?
                    'scheme-reader-error
@@ -886,9 +930,9 @@ separator).
      (unread-char match stream)
      (%read-scheme-number stream +read-base+))
     ((:or #\Newline #\Space #\Tab) :skip)
-    (#\# (read-special inside-list? quoted? first? stream))
-    (#\' (read-quoted 'quote inside-list? first? stream))
-    (#\` (read-quoted 'quasiquote inside-list? first? stream))
+    (#\# (read-special inside-list? quoted? first? labels stream))
+    (#\' (read-quoted 'quote inside-list? first? labels stream))
+    (#\` (read-quoted 'quasiquote inside-list? first? labels stream))
     (#\, (read-quoted (if (eql #\@ (peek-char* stream))
                           (progn
                             (skip-read-char stream)
@@ -896,6 +940,7 @@ separator).
                           'unquote)
                       inside-list?
                       first?
+                      labels
                       stream))
     (#\; (read-line-comment stream))
     (#\| (read-escaped-scheme-symbol stream))
@@ -913,13 +958,14 @@ separator).
      (unread-char match stream)
      (read-scheme-symbol stream))))
 
-(defun read-scheme-list (stream)
+(defun read-scheme-list (stream &key labels)
   "Reads a list, with special handling of the dotted list syntax."
   (loop :with s-expression := (list)
         :with last := (list)
         :for match := (read-scheme stream
                                    :inside-list? t
-                                   :first? (endp s-expression))
+                                   :first? (endp s-expression)
+                                   :labels labels)
         :for after-dot? := nil :then (or dot? after-dot?)
         :for dot? := (eql match :dot)
         :with already-dotted? := nil
@@ -951,19 +997,24 @@ separator).
                          :details "An expression needs an item after the dot in a dotted list")
              (return s-expression))))
 
-(defun read-scheme (stream &key inside-list? quoted? first?)
+(defun read-scheme (stream &key inside-list? quoted? first? (labels (make-hash-table)))
   "An implementation of Scheme's read procedure."
-  (loop :for match := (%read-scheme-character inside-list? quoted? first? stream)
+  (check-type labels (maybe hash-table))
+  (loop :for match := (%read-scheme-character inside-list? quoted? first? labels stream)
         :while (eql match :skip)
         :finally (return match)))
 
-(defun read-scheme-file (stream)
+(defun read-scheme-file (stream-or-path &key (labels (make-hash-table)))
   "
-Reads an entire file from a stream into a list using the Scheme
-reader. It takes a stream rather than a file pathname so it should be
-able to handle other file-like streams as well, such as a stream from
-`with-input-from-string'.
+Reads an entire file from a stream or pathname into a list using the
+Scheme reader.
 "
-  (loop :for match := (read-scheme stream)
-        :until (eql match :eof)
-        :collect match))
+  (check-type labels (maybe hash-table))
+  (flet ((read-scheme-file* (stream)
+           (loop :for match := (read-scheme stream :labels labels)
+                 :until (eql match :eof)
+                 :collect match)))
+    (if (typep stream-or-path '(or string pathname))
+        (with-open-file (stream stream-or-path)
+          (read-scheme-file* stream))
+        (read-scheme-file* stream-or-path))))
