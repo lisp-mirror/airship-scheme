@@ -19,6 +19,15 @@ Changelog](https://keepachangelog.com/en/1.0.0/).
      including `%list?` for lists that aren't necessarily proper
      lists.
  - A custom reader for the [R7RS-small] version of Scheme.
+   - A CL-style syntax extension for specifying short, single, double,
+     and long floats, which is permitted by the R7RS standard.
+   - A few other minor syntax extensions, particularly around numbers,
+     to permit some commonly allowed syntax that is technically not
+     fully portable. For instance, both `2i` and `+2i` are read as
+     `0+2i`, but `2i` is technically an extension to the syntax.
+   - Many potential numbers become symbols, especially starting with
+     `+` and `-`. This is necessary to interoperate with CL `+foo+`
+     style constants.
  - A custom writer that displays s-expressions in Scheme syntax
    instead of Common Lisp syntax.
  - An internal representation for Scheme that supports tail recursion

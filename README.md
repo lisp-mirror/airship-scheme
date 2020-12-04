@@ -24,22 +24,6 @@ The primary repository is located
 completion is measured under the [milestones
 here](https://gitlab.com/mbabich/airship-scheme/-/milestones).
 
-Warning
--------
-
-*This repository is currently a work-in-progress. Expect major changes
-to happen rapidly and without warning.*
-
-The basic language is currently **not** working because some of the
-key functionality is incomplete.
-
-The language will be usable, although still unstable, in [version
-0.1](https://gitlab.com/mbabich/airship-scheme/-/milestones/4). Until
-then, the versions will be of the form 0.0.n. After that, the versions
-will be of the form 0.n. That is, the first version is version 0.0.1,
-which will be followed by 0.0.2, and so on. The first usable version
-is version 0.1, which will be followed by 0.2, and so on.
-
 Overview
 --------
 
@@ -86,7 +70,8 @@ for "free" by taking advantage of high-performance CL compilers like
 SBCL. Schemers will be able to wrap libraries written in CL, which
 will more than double the number of libraries available. These wrapped
 CL libraries will feel a lot "Lispier" than wrapped C libraries
-because CL is a closely related programming language.
+because CL is a closely related programming language. Additionally,
+almost all of the Common Lisp standard library will be wrapped.
 
 Installing
 ----------
