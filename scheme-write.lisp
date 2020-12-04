@@ -45,7 +45,11 @@ float is the default, writing no suffix.
        (write-scheme-number (realpart number) stream *print-base*)
        (when (and (finitep (imagpart number)) (plusp (imagpart number)))
          (write-char #\+ stream))
-       (write-scheme-number (imagpart number) stream *print-base*)
+       (let ((imagpart (imagpart number)))
+         (cond ((= imagpart -1)
+                (write-char #\- stream))
+               ((not (= imagpart 1))
+                (write-scheme-number imagpart stream *print-base*))))
        (write-char #\i stream))))
   nil)
 

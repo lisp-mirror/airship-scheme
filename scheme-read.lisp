@@ -426,7 +426,9 @@ separator).
                       ((:or #\+ #\-)
                        (let* ((sign-prefix* match)
                               (next-char (peek-char* stream))
-                              (number* (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream t)))
+                              (number* (if (char-equal next-char #\i)
+                                           (* (%sign sign-prefix*) 1)
+                                           (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream t))))
                          (f:with-float-traps-masked t
                            (read-case (stream match)
                              ((:or #\i #\I)
