@@ -208,24 +208,27 @@ type of float.
 This is used for literal infinities in the Scheme reader.
 "
   (declare (optimize (speed 3)))
-  (case float-type
-    (double-float
-     (if negate?
-         f:double-float-negative-infinity
-         f:double-float-positive-infinity))
-    (single-float
-     (if negate?
-         f:single-float-negative-infinity
-         f:single-float-positive-infinity))
-    (long-float
-     (if negate?
-         f:long-float-negative-infinity
-         f:long-float-positive-infinity))
-    (short-float
-     (if negate?
-         f:short-float-negative-infinity
-         f:short-float-positive-infinity))
-    (t nil)))
+  ;; Tell SBCL not to warn us about unreachable branches being deleted
+  ;; because that's kind of the point of inlining this function.
+  (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
+    (case float-type
+      (double-float
+       (if negate?
+           f:double-float-negative-infinity
+           f:double-float-positive-infinity))
+      (single-float
+       (if negate?
+           f:single-float-negative-infinity
+           f:single-float-positive-infinity))
+      (long-float
+       (if negate?
+           f:long-float-negative-infinity
+           f:long-float-positive-infinity))
+      (short-float
+       (if negate?
+           f:short-float-negative-infinity
+           f:short-float-positive-infinity))
+      (t nil))))
 
 ;;;; Type Conversion
 

@@ -261,20 +261,17 @@ separator).
                                                              (subseq string 0 (1+ index)))))
                        (invalid-infnan-error)))
                   ((delimiter? next-char)
-                   (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-                     (inf 'double-float negate?)))
+                   (inf 'double-float negate?))
                   ((char-equal #\i next-char)
                    (when first?
                      (skip-read-char stream))
                    (if (or (not first?) (%delimiter? stream))
                        (f:with-float-traps-masked t
-                         (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-                           (let ((result (inf 'double-float negate?)))
-                             (values (if first? (complex 0 result) result) t))))
+                         (let ((result (inf 'double-float negate?)))
+                           (values (if first? (complex 0 result) result) t)))
                        (invalid-infnan-error)))
                   ((and first? (complex-number-separator? next-char))
-                   (locally (declare #+sbcl (sb-ext:muffle-conditions sb-ext:compiler-note))
-                     (inf 'double-float negate?)))
+                   (inf 'double-float negate?))
                   (t
                    (%read-final-char (inf (read-exponent* stream) negate?) stream first?))))))))
 
