@@ -165,6 +165,8 @@ though. |#
         -4i
         +3i
         7i
+        4-i
+        9+i
         +inf.0+inf.0i
         +inf.0-nan.0i
         +nan.0+inf.0i

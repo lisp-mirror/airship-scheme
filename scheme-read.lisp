@@ -423,16 +423,21 @@ separator).
                       ((:or #\+ #\-)
                        (let* ((sign-prefix* match)
                               (next-char (peek-char* stream))
-                              (number* (if (char-equal next-char #\i)
-                                           (* (%sign sign-prefix*) 1)
-                                           (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream t))))
+                              (number* (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream t)))
                          (f:with-float-traps-masked t
                            (read-case (stream match)
                              ((:or #\i #\I)
                               (complex number number*))
+                             ;; If the second part was already
+                             ;; processed as just an #\i then number*
+                             ;; is already a complex number.
                              (t
-                              (error 'scheme-reader-error
-                                     :details "Invalid numerical syntax."))))))
+                              (error-unless (and (complexp number*)
+                                                 (zerop (realpart number*))
+                                                 (zerop (imagpart number)))
+                                            'scheme-reader-error
+                                            :details "Invalid numerical syntax.")
+                              (complex number (imagpart number*)))))))
                       (t
                        (error 'scheme-reader-error
                               :details "Invalid numerical syntax.")))
