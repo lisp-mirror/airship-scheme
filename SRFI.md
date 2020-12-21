@@ -116,7 +116,7 @@
 | [SRFI 109]     |                          |                                             |
 | [SRFI 110]     |                          |                                             |
 | [SRFI 111]     | Unimplemented            | `(scheme box)`                              |
-| [SRFI 112]     |                          |                                             |
+| **[SRFI 112]** | **Implemented**          |                                             |
 | [SRFI 113]     | Unimplemented            | `(scheme set)`                              |
 | ~~[SRFI 114]~~ | *Withdrawn*              |                                             |
 | [SRFI 115]     | Unimplemented            | `(scheme regex)`                            |
@@ -163,25 +163,25 @@
 | [SRFI 156]     |                          |                                             |
 | [SRFI 157]     |                          |                                             |
 | [SRFI 158]     | Unimplemented            | `(scheme generator)`                        |
-| [SRFI 159]     | Unimplemented            | `(scheme show)`                             |
+| ~~[SRFI 159]~~ | *Withdrawn*              | `(scheme show)`                             |
 | [SRFI 160]     | Unimplemented            | `(scheme vector @)`                         |
 | [SRFI 161]     |                          |                                             |
 | [SRFI 162]     |                          |                                             |
 | [SRFI 163]     |                          |                                             |
 | [SRFI 164]     |                          |                                             |
 | [SRFI 165]     |                          |                                             |
-| [SRFI 166]     |                          |                                             |
+| [SRFI 166]     | Unimplemented            | the new `(scheme show)`?                    |
 | [SRFI 167]     |                          |                                             |
 | [SRFI 168]     |                          |                                             |
 | [SRFI 169]     |                          |                                             |
-| [SRFI 170]     | Draft                    |                                             |
+| [SRFI 170]     |                          |                                             |
 | [SRFI 171]     |                          |                                             |
 | **[SRFI 172]** | **Implemented**          |                                             |
 | [SRFI 173]     |                          |                                             |
 | [SRFI 174]     |                          |                                             |
 | [SRFI 175]     |                          |                                             |
 | [SRFI 176]     |                          |                                             |
-| [SRFI 177]     | Draft                    |                                             |
+| ~~[SRFI 177]~~ | *Withdrawn*              |                                             |
 | [SRFI 178]     |                          |                                             |
 | [SRFI 179]     |                          |                                             |
 | [SRFI 180]     |                          |                                             |
@@ -190,7 +190,7 @@
 | ~~[SRFI 183]~~ | *Withdrawn*              |                                             |
 | ~~[SRFI 184]~~ | *Withdrawn*              |                                             |
 | [SRFI 185]     |                          |                                             |
-| [SRFI 186]     |                          |                                             |
+| ~~[SRFI 186]~~ | *Withdrawn*              |                                             |
 | ~~[SRFI 187]~~ | *Withdrawn*              |                                             |
 | [SRFI 188]     |                          |                                             |
 | [SRFI 189]     |                          |                                             |
@@ -206,10 +206,24 @@
 | ~~[SRFI 199]~~ | *Withdrawn*              |                                             |
 | [SRFI 200]     | Draft                    |                                             |
 | [SRFI 201]     | Draft                    |                                             |
-| [SRFI 202]     | Draft                    |                                             |
+| [SRFI 202]     |                          |                                             |
 | [SRFI 203]     |                          |                                             |
 | [SRFI 204]     | Draft                    |                                             |
 | [SRFI 205]     | Draft                    |                                             |
+| [SRFI 206]     | Draft                    |                                             |
+| [SRFI 207]     |                          |                                             |
+| [SRFI 208]     | Draft                    |                                             |
+| [SRFI 209]     |                          |                                             |
+| [SRFI 210]     | Draft                    |                                             |
+| [SRFI 211]     | Draft                    |                                             |
+| [SRFI 212]     | Draft                    |                                             |
+| [SRFI 213]     | Draft                    |                                             |
+| [SRFI 214]     | Draft                    |                                             |
+| [SRFI 215]     | Draft                    |                                             |
+| [SRFI 216]     | Draft                    |                                             |
+| [SRFI 217]     | Draft                    |                                             |
+| [SRFI 218]     | Draft                    |                                             |
+| [SRFI 219]     | Draft                    |                                             |
 
 ## Non-SRFIs in [R7RS-large]
 
@@ -464,4 +478,17 @@
 [SRFI 203]: https://srfi.schemers.org/srfi-203/srfi-203.html
 [SRFI 204]: https://srfi.schemers.org/srfi-204/srfi-204.html
 [SRFI 205]: https://srfi.schemers.org/srfi-205/srfi-205.html
+[SRFI 206]: https://srfi.schemers.org/srfi-205/srfi-206.html
+[SRFI 207]: https://srfi.schemers.org/srfi-205/srfi-207.html
+[SRFI 208]: https://srfi.schemers.org/srfi-205/srfi-208.html
+[SRFI 209]: https://srfi.schemers.org/srfi-205/srfi-209.html
+[SRFI 210]: https://srfi.schemers.org/srfi-205/srfi-210.html
+[SRFI 211]: https://srfi.schemers.org/srfi-205/srfi-211.html
+[SRFI 212]: https://srfi.schemers.org/srfi-205/srfi-212.html
+[SRFI 213]: https://srfi.schemers.org/srfi-205/srfi-213.html
+[SRFI 214]: https://srfi.schemers.org/srfi-205/srfi-214.html
+[SRFI 215]: https://srfi.schemers.org/srfi-205/srfi-215.html
+[SRFI 216]: https://srfi.schemers.org/srfi-205/srfi-216.html
+[SRFI 217]: https://srfi.schemers.org/srfi-205/srfi-217.html
+[SRFI 218]: https://srfi.schemers.org/srfi-205/srfi-218.html
 [R6RS bytevectors]: http://www.r6rs.org/final/html/r6rs-lib/r6rs-lib-Z-H-3.html#node_chap_2
