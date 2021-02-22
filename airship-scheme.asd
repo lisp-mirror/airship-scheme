@@ -5,7 +5,7 @@
 (asdf:defsystem #:airship-scheme
   :serial t
   :description "A new r7rs Scheme implementation, designed to run within a Common Lisp environment."
-  :version "0.0.0.0"
+  :version "0.0.0"
   :author "Michael Babich"
   :maintainer "Michael Babich"
   :license "MIT"
@@ -28,4 +28,23 @@
                (:file "scheme-write")
                (:file "scheme-read")
                (:file "standard-procedures")
-               (:file "extra-procedures")))
+               (:file "extra-procedures"))
+  :in-order-to ((asdf:test-op (asdf:test-op "airship-scheme/tests"))))
+
+(asdf:defsystem #:airship-scheme/tests
+  :serial t
+  :description "The tests for the Common Lisp side of Airship Scheme."
+  :version "0.0.0"
+  :author "Michael Babich"
+  :maintainer "Michael Babich"
+  :license "MIT"
+  :depends-on (:airship-scheme
+               :fiveam)
+  :components ((:module "tests"
+                :serial t
+                :components ((:file "package")
+                             (:file "tests"))))
+  :perform (asdf:test-op (o s) (uiop:symbol-call :fiveam
+                                                 :run!
+                                                 (cl:intern (cl:symbol-name '#:airship-scheme/tests)
+                                                            '#:airship-scheme/tests))))
