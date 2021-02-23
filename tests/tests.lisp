@@ -31,10 +31,6 @@
            1.0d0))
   (is (eql (read-scheme* "4.")
            4.0d0))
-  ;; Note: This test currently fails because at the top level, the
-  ;; reader reads it as a failed dotted list instead of as a potential
-  ;; number.
-  #+(or)
   (is (eql (read-scheme* ".4")
            0.4d0))
   (is (eql (read-scheme* "-.4")

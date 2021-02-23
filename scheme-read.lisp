@@ -882,9 +882,6 @@ separator).
 ;;; A dot can represent a possible number (if not, it's a symbol), a
 ;;; part of a dotted list, or the start of a symbol.
 (defun read-scheme-dot (match inside-list? quoted? first? stream)
-  (error-unless inside-list?
-                'scheme-reader-error
-                :details "The dotted list syntax must be used inside of a list")
   (let ((next-char (peek-char* stream)))
     (cond ((eql :eof next-char)
            (eof-error "after a dot"))
@@ -892,6 +889,9 @@ separator).
            (unread-char match stream)
            (%read-scheme-number stream +flonum-base+))
           ((delimiter? next-char)
+           (error-unless inside-list?
+                         'scheme-reader-error
+                         :details "The dotted list syntax must be used inside of a list")
            (error-when quoted?
                        'scheme-reader-error
                        :details "A dot cannot directly follow a quote")
