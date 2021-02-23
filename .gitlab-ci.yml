@@ -1,0 +1,15 @@
+image: daewok/lisp-devel
+
+stages:
+  - test
+
+before_script:
+  - apt-get update -qy
+  - apt-get install -y git-core
+  - git clone https://gitlab.com/zombie-raptor/zr-utils ~/quicklisp/local-projects/zr-utils
+  - ln -s "${CI_PROJECT_DIR}" ~/quicklisp/local-projects/airship-scheme
+
+test:
+  stage: test
+  script:
+    - sbcl --non-interactive --load ~/quicklisp/local-projects/airship-scheme/tests/test-script.lisp
