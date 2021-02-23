@@ -3,4 +3,7 @@
 (cl:defpackage #:airship-scheme/tests
   (:use #:airship-scheme
         #:cl)
-  (:local-nicknames (:scheme :airship-scheme)))
+  (:import-from #:5am
+                #:is)
+  (:local-nicknames (:scheme :airship-scheme)
+                    (:f :float-features)))
