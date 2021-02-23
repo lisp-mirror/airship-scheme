@@ -8,16 +8,15 @@
          (ql:quickload :uiop :silent t)
          nil)
 
+;;; Turn on full type inference to catch more type errors when
+;;; compiling.
+#+sbcl
+(setf sb-ext:*derive-function-types* t)
+
 ;;; Load the dependencies first because if they have warnings, there's
 ;;; nothing we can do about that.
 (dolist (system (asdf:system-depends-on (asdf:find-system :airship-scheme)))
   (ql:quickload system :silent t))
-
-;;; Turn on full type inference to catch more type errors when
-;;; compiling. Do this after dependencies because, again, we're not
-;;; supposed to test problems with those.
-#+sbcl
-(setf sb-ext:*derive-function-types* t)
 
 ;;; The first "test" is to compile with no warnings.
 (let ((asdf:*compile-file-warnings-behaviour* :error))

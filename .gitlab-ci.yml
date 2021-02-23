@@ -7,6 +7,7 @@ before_script:
   - apt-get update -qy
   - apt-get install -y git-core
   - git clone https://gitlab.com/zombie-raptor/zr-utils ~/quicklisp/local-projects/zr-utils
+  - git clone https://github.com/Shinmera/float-features ~/quicklisp/local-projects/float-features
   - ln -s "${CI_PROJECT_DIR}" ~/quicklisp/local-projects/airship-scheme
 
 test:
