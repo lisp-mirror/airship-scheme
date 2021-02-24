@@ -233,3 +233,16 @@
     (is (and (typep z '(complex single-float))
              (scheme::nanp (realpart z))
              (scheme::nanp (imagpart z))))))
+
+(5am:test bases-and-exactness
+ "Are numbers in different bases and exactness read correctly?"
+ (is (eql (read-scheme* "#x42") 66))
+ (is (eql (read-scheme* "#b101") 5))
+ (is (eql (read-scheme* "#o777") 511))
+ (is (eql (read-scheme* "#d1999") 1999))
+ (is (eql (read-scheme* "#xabcdef") 11259375))
+ (is (eql (read-scheme* "#i33") 33.0d0))
+ (is (eql (read-scheme* "#e876") 876))
+ (is (eql (read-scheme* "#e876.0") 876))
+ ;; TODO: Combine character base and character exactness in tests
+ )
