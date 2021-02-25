@@ -235,14 +235,22 @@
              (scheme::nanp (imagpart z))))))
 
 (5am:test bases-and-exactness
- "Are numbers in different bases and exactness read correctly?"
- (is (eql (read-scheme* "#x42") 66))
- (is (eql (read-scheme* "#b101") 5))
- (is (eql (read-scheme* "#o777") 511))
- (is (eql (read-scheme* "#d1999") 1999))
- (is (eql (read-scheme* "#xabcdef") 11259375))
- (is (eql (read-scheme* "#i33") 33.0d0))
- (is (eql (read-scheme* "#e876") 876))
- (is (eql (read-scheme* "#e876.0") 876))
- ;; TODO: Combine character base and character exactness in tests
- )
+  "Are numbers in different bases and exactness read correctly?"
+  (is (eql (read-scheme* "#x42") 66))
+  (is (eql (read-scheme* "#xFFF") 4095))
+  (is (eql (read-scheme* "#Xfff") 4095))
+  (is (eql (read-scheme* "#XffF") 4095))
+  (is (eql (read-scheme* "#b101") 5))
+  (is (eql (read-scheme* "#o777") 511))
+  (is (eql (read-scheme* "#d1999") 1999))
+  (is (eql (read-scheme* "#xabcdef") 11259375))
+  (is (eql (read-scheme* "#i33") 33.0d0))
+  (is (eql (read-scheme* "#e876") 876))
+  (is (eql (read-scheme* "#e876.0") 876))
+  (is (eql (read-scheme* "#e32.1") 321/10))
+  (is (eql (read-scheme* "#x#iee") 238.0d0))
+  (is (eql (read-scheme* "#i#xcd") 205.0d0))
+  (is (eql (read-scheme* "#e#x1a") 26))
+  (is (eql (read-scheme* "#x#e93fc3a") 9698362))
+  (is (eql (read-scheme* "#i#o4321") 2257.0d0))
+  (is (eql (read-scheme* "#b#i1110101010100001") 60065.0d0)))
