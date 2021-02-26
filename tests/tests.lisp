@@ -254,3 +254,21 @@
   (is (eql (read-scheme* "#x#e93fc3a") 9698362))
   (is (eql (read-scheme* "#i#o4321") 2257.0d0))
   (is (eql (read-scheme* "#b#i1110101010100001") 60065.0d0)))
+
+(5am:test symbol-reading
+  "Are symbols read correctly?"
+  (is (string= (symbol-name (read-scheme* "hello"))
+               "HELLO"))
+  (is (string= (symbol-name (read-scheme* "WORLD"))
+               "world"))
+  (is (string= (symbol-name (read-scheme* "TeSt"))
+               "tEsT")))
+
+(5am:test string-escaped-characters
+  "Do literal strings correctly handle escaped characters?"
+  (is (eql (char (read-scheme* "\"\\n\"") 0) (code-char #x000a)))
+  (is (eql (char (read-scheme* "\"\\t\"") 0) (code-char #x0009)))
+  (is (eql (char (read-scheme* "\"\\a\"") 0) (code-char #x0007)))
+  (is (eql (char (read-scheme* "\"\\b\"") 0) (code-char #x0008)))
+  (is (eql (char (read-scheme* "\"\\r\"") 0) (code-char #x000d)))
+  (is (eql (char (read-scheme* "\"\\x42;\"") 0) #\B)))
