@@ -266,9 +266,29 @@
 
 (5am:test string-escaped-characters
   "Do literal strings correctly handle escaped characters?"
-  (is (eql (char (read-scheme* "\"\\n\"") 0) (code-char #x000a)))
-  (is (eql (char (read-scheme* "\"\\t\"") 0) (code-char #x0009)))
-  (is (eql (char (read-scheme* "\"\\a\"") 0) (code-char #x0007)))
-  (is (eql (char (read-scheme* "\"\\b\"") 0) (code-char #x0008)))
-  (is (eql (char (read-scheme* "\"\\r\"") 0) (code-char #x000d)))
-  (is (eql (char (read-scheme* "\"\\x42;\"") 0) #\B)))
+  (is (char= (char (read-scheme* "\"\\n\"") 0) (code-char #x000a)))
+  (is (char= (char (read-scheme* "\"\\t\"") 0) (code-char #x0009)))
+  (is (char= (char (read-scheme* "\"\\a\"") 0) (code-char #x0007)))
+  (is (char= (char (read-scheme* "\"\\b\"") 0) (code-char #x0008)))
+  (is (char= (char (read-scheme* "\"\\r\"") 0) (code-char #x000d)))
+  (is (char= (char (read-scheme* "\"\\x42;\"") 0) #\B))
+  (is (string= (read-scheme* (format nil "\"foo \\~%bar\""))
+               "foo bar"))
+  (is (string= (read-scheme* (format nil "\"foo \\   ~%bar\""))
+               "foo bar"))
+  (is (string= (read-scheme* (format nil "\"foo \\	~%bar\""))
+               "foo bar"))
+  (is (string= (read-scheme* (format nil "\"foo \\ 	 ~%bar\""))
+               "foo bar")))
+
+(5am:test literal-characters
+  "Are the literal characters read properly?"
+  (is (char= (read-scheme* "#\\alarm")     (code-char #x0007)))
+  (is (char= (read-scheme* "#\\backspace") (code-char #x0008)))
+  (is (char= (read-scheme* "#\\delete")    (code-char #x007f)))
+  (is (char= (read-scheme* "#\\escape")    (code-char #x001b)))
+  (is (char= (read-scheme* "#\\newline")   (code-char #x000a)))
+  (is (char= (read-scheme* "#\\null")      (code-char #x0000)))
+  (is (char= (read-scheme* "#\\return")    (code-char #x000d)))
+  (is (char= (read-scheme* "#\\space")     (char " " 0)))
+  (is (char= (read-scheme* "#\\tab")       (char "	" 0))))

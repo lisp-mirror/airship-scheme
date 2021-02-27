@@ -640,7 +640,7 @@ separator).
            (unread-char c stream)
            ;; Note: There might be non-interning ways to do this, but
            ;; this way is extensible.
-           (case (read-scheme-symbol stream)
+           (case (read-scheme-symbol stream :package (find-package '#:airship-scheme))
              (alarm     (code-char #x0007))
              (backspace (code-char #x0008))
              (delete    (code-char #x007f))
