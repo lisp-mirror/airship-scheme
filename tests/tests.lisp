@@ -16,7 +16,20 @@
 (5am:test boolean
   "Are true and false read correctly?"
   (is (eq (read-scheme* "#t") t))
-  (is (eq (read-scheme* "#f") %scheme-boolean:f)))
+  (is (eq (read-scheme* "#true") t))
+  (is (eq (read-scheme* "#TrUe") t))
+  (is (eq (read-scheme* "#tRuE") t))
+  (is (eq (read-scheme* "#TRUE") t))
+  (is (eq (car (read-scheme* "(#t)")) t))
+  (is (eq (car (read-scheme* "(#true)")) t))
+  (is (eq (read-scheme* "#f") %scheme-boolean:f))
+  (is (eq (read-scheme* "#false") %scheme-boolean:f))
+  (is (eq (read-scheme* "#FaLsE") %scheme-boolean:f))
+  (is (eq (read-scheme* "#fAlSe") %scheme-boolean:f))
+  (is (eq (read-scheme* "#FALSE") %scheme-boolean:f))
+  (is (eq (car (read-scheme* "(#f)")) %scheme-boolean:f))
+  (is (eq (car (read-scheme* "(#false)")) %scheme-boolean:f))
+  (is (eq '%scheme-boolean:f %scheme-boolean:f)))
 
 ;;; Note: This should match the list of numbers in examples/syntax.scm
 (5am:test numeric-syntax
