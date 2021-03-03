@@ -278,7 +278,26 @@
   (is (string= (symbol-name (read-scheme* "WORLD"))
                "world"))
   (is (string= (symbol-name (read-scheme* "TeSt"))
-               "tEsT")))
+               "tEsT"))
+  (is (string= (symbol-name (read-scheme* "|hello|"))
+               "HELLO"))
+  (is (string= (symbol-name (read-scheme* "|HELLO|"))
+               "hello"))
+  (is (string= (symbol-name (read-scheme* "|This is a sentence.|"))
+               "tHIS IS A SENTENCE."))
+  (is (string= (symbol-name (read-scheme* "||"))
+               ""))
+  (is (string= (symbol-name (read-scheme* "|foo\\nbar|"))
+               (format nil "FOO~%BAR"))))
+
+(5am:test read-quoted
+  "Are quoted things read correctly?"
+  (let ((quoted-a (read-scheme* "'a")))
+    (is (and (listp quoted-a)
+             (eql (car quoted-a) 'quote)
+             (eql (cadr quoted-a) 'a)
+             (endp (cddr quoted-a)))))
+  (is (equalp (read-scheme* "'(0 1 1 2 3 5)") ''(0 1 1 2 3 5))))
 
 (5am:test string-escaped-characters
   "Do literal strings correctly handle escaped characters?"
@@ -320,6 +339,8 @@
     (is (and (typep scheme-sequence 'list)
              (= (length scheme-sequence) (length lisp-sequence))
              (every #'eql scheme-sequence lisp-sequence))))
+  (is (equalp (read-scheme* "(a . b)") '(a . b)))
+  (is (equalp (read-scheme* "(1 2 . 3)") '(1 2 . 3)))
   (let ((scheme-sequence (read-scheme* "\"z y x Z Y X\""))
         (lisp-sequence "z y x Z Y X"))
     (is (and (typep scheme-sequence 'simple-string)
