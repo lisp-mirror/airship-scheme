@@ -364,3 +364,19 @@
     (is (and (typep scheme-sequence '(simple-array (unsigned-byte 8) (*))))
         (= (length scheme-sequence) (length lisp-sequence))
         (every #'= scheme-sequence lisp-sequence))))
+
+(5am:test arithmetic
+  "Are the arithmetic procedures correct?"
+  (is (eql (r7rs::+ #'identity 1) 1))
+  (is (eql (r7rs::+ #'identity 8 3) 11))
+  (is (eql (r7rs::+ #'identity 5 4 -3) 6))
+  (is (eql (r7rs::+ #'identity) 0))
+  (is (eql (r7rs::- #'identity 42) -42))
+  (is (eql (r7rs::- #'identity 4321 1234) 3087))
+  (is (eql (r7rs::* #'identity) 1))
+  (is (eql (r7rs::* #'identity 32) 32))
+  (is (eql (r7rs::* #'identity 28 48) 1344))
+  (is (eql (r7rs::/ #'identity 4) 1/4))
+  (is (eql (r7rs::/ #'identity 3 7) 3/7))
+  (is (eql (r7rs::/ #'identity 46 2) 23))
+  (is (eql (r7rs::/ #'identity 46d0 2d0) 23d0)))
