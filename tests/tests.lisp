@@ -290,13 +290,22 @@
   (is (string= (symbol-name (read-scheme* "|foo\\nbar|"))
                (format nil "FOO~%BAR"))))
 
+(defun quoted? (form)
+  (and (listp form) (eql (car form) 'quote) (cdr form) (endp (cddr form))))
+
+(defun quote-contents (quoted-form)
+  (cadr quoted-form))
+
 (5am:test read-quoted
   "Are quoted things read correctly?"
   (let ((quoted-a (read-scheme* "'a")))
-    (is (and (listp quoted-a)
-             (eql (car quoted-a) 'quote)
-             (eql (cadr quoted-a) 'a)
-             (endp (cddr quoted-a)))))
+    (is (and (quoted? quoted-a)
+             (eql (quote-contents quoted-a) 'a))))
+  (let* ((double-quoted-a (read-scheme* "''a"))
+         (quoted-a (quote-contents double-quoted-a)))
+    (is (and (quoted? double-quoted-a)
+             (quoted? quoted-a)
+             (eql (quote-contents quoted-a) 'a))))
   (is (equalp (read-scheme* "'(0 1 1 2 3 5)") ''(0 1 1 2 3 5))))
 
 (5am:test string-escaped-characters
