@@ -389,6 +389,10 @@
   (destructuring-bind (symbol &rest rest) expression
     `(,(intern (symbol-name symbol) 'r7rs) #'identity ,@rest)))
 
+(defmacro scheme* (expression)
+  (destructuring-bind (symbol &rest rest) expression
+    `(,(intern (symbol-name symbol) 'r7rs) #'values ,@rest)))
+
 (5am:test arithmetic
   "Are the arithmetic procedures correct?"
   (is (eql (scheme (+ 1)) 1))
@@ -408,5 +412,32 @@
   (is (eql (scheme (abs 742)) 742))
   (is (eql (scheme (abs -674.578d0)) 674.578d0))
   (is (eql (scheme (abs 976.798d0)) 976.798d0))
-  (multiple-value-bind (x y) (r7rs::floor/ #'values 17 8)
-    (is (and (eql x 2) (eql y 1)))))
+  (is (equal (multiple-value-list (scheme* (floor/ 17 8)))
+             (list 2 1))))
+
+(5am:test numerical-predicates
+  "Are the numerical predicates correct?"
+  (is (eql (scheme (number? 42)) t))
+  (is (eql (scheme (number? "hello"))
+           %scheme-boolean:f))
+  (is (eql (scheme (complex? 58d0)) t))
+  (is (eql (scheme (complex? #C(3.0f0 2.0f0))) t))
+  (is (eql (scheme (real? 3)) t))
+  (is (eql (scheme (real? #C(842 546)))
+           %scheme-boolean:f))
+  (is (eql (scheme (rational? 8)) t))
+  (is (eql (scheme (rational? 73/2)) t))
+  (is (eql (scheme (integer? 259361371606)) t))
+  (is (eql (scheme (integer? 259361371606.0f0)) t))
+  (is (eql (scheme (integer? 259361371606.0d0)) t))
+  (is (eql (scheme (exact-integer? 259361371606)) t))
+  (is (eql (scheme (exact-integer? 259361371606.0f0))
+           %scheme-boolean:f))
+  (is (eql (scheme (exact-integer? 259361371606.0d0))
+           %scheme-boolean:f))
+  (is (and (eql (scheme (exact? 22/7)) t)
+           (eql (scheme (inexact? 22/7)) %scheme-boolean:f)))
+  (is (and (eql (scheme (exact? 3.14f0)) %scheme-boolean:f)
+           (eql (scheme (inexact? 3.14f0)) t)))
+  (is (and (eql (scheme (exact? 3.14d0)) %scheme-boolean:f)
+           (eql (scheme (inexact? 3.14d0)) t))))
