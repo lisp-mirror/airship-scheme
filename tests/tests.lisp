@@ -13,7 +13,7 @@
 
 (5am:in-suite airship-scheme/scheme-read)
 
-(5am:test boolean
+(5am:test boolean-syntax
   "Are true and false read correctly?"
   (is (eq (read-scheme* "#t") t))
   (is (eq (read-scheme* "#true") t))
@@ -250,7 +250,7 @@
              (scheme::nanp (realpart z))
              (scheme::nanp (imagpart z))))))
 
-(5am:test bases-and-exactness
+(5am:test read-bases-and-exactness
   "Are numbers in different bases and exactness read correctly?"
   (is (eql (read-scheme* "#x42") 66))
   (is (eql (read-scheme* "#xFFF") 4095))
@@ -271,7 +271,7 @@
   (is (eql (read-scheme* "#i#o4321") 2257.0d0))
   (is (eql (read-scheme* "#b#i1110101010100001") 60065.0d0)))
 
-(5am:test symbol-reading
+(5am:test read-symbols
   "Are symbols read correctly?"
   (is (string= (symbol-name (read-scheme* "hello"))
                "HELLO"))
@@ -352,7 +352,7 @@
   (is (char= (read-scheme* "#\\x221E")     #\∞))
   (is (char= (read-scheme* "#\\xe9")       #\é)))
 
-(5am:test sequences
+(5am:test read-sequences
   "Does Airship Scheme correctly read sequences?"
   (let ((scheme-sequence (read-scheme* "(a b c d e f g 1 2 3)"))
         (lisp-sequence '(a b c d e f g 1 2 3)))
@@ -392,6 +392,8 @@
 (defmacro scheme* (expression)
   (destructuring-bind (symbol &rest rest) expression
     `(,(intern (symbol-name symbol) 'r7rs) #'values ,@rest)))
+
+;;; TODO: equivalence predicates
 
 (5am:test arithmetic
   "Are the arithmetic procedures correct?"
@@ -479,6 +481,21 @@ Airship Scheme, which isn't guaranteed without this predicate.
   (is (and (boolean-true? (scheme (odd? -99)))
            (scheme-not (scheme (even? -99))))))
 
+;;; TODO: the rest of the number procedures
+
+;;; TODO: number->string string->number
+
+;;; TODO: booleans
+;;; TODO: pairs
+;;; TODO: lists
+;;; TODO: symbols
+;;; TODO: characters
+
+;;; TODO: string<? string-ci<? string>? string-ci>? string<=?
+;;; string-ci<=? string>=? string-ci>=?
+;;;
+;;; TODO: string-upcase string-downcase string-foldcase substring
+;;; string-append string->list list->string string-copy string-copy!
 (5am:test strings
   "Are the string procedures correct?"
   (is (boolean-true? (scheme (string? "Hello"))))
@@ -505,4 +522,31 @@ Airship Scheme, which isn't guaranteed without this predicate.
              (scheme (string=? s "abc"))))
     (is (and (eql #\a (scheme (string-ref s 0)))
              (eql #\b (scheme (string-ref s 1)))
-             (eql #\c (scheme (string-ref s 2)))))))
+             (eql #\c (scheme (string-ref s 2)))))
+    (progn
+      (scheme (string-set! s 1 #\B))
+      (is (and (string= s "aBc")
+               (scheme (string=? s "aBc"))
+               (eql #\B (scheme (string-ref s 1)))
+               (eql #\B (aref s 1))))
+      (scheme (string-fill! s #\z))
+      (is (and (string= s "zzz")
+               (scheme (string=? s "zzz"))
+               (eql #\z (scheme (string-ref s 2)))
+               (eql #\z (aref s 2))))
+      (scheme (string-fill! s #\x 1))
+      (is (and (string= s "zxx")
+               (scheme (string=? s "zxx"))
+               (eql #\x (scheme (string-ref s 2)))
+               (eql #\x (aref s 2))))
+      (scheme (string-fill! s #\y 1 2))
+      (is (and (string= s "zyx")
+               (scheme (string=? s "zyx"))
+               (eql #\y (scheme (string-ref s 1)))
+               (eql #\x (aref s 2)))))))
+
+;;; TODO: vectors, bytevectors
+
+;;; TODO: 6.10 6.11 6.12 6.13 6.14
+
+;;; TODO: cl-environment and SRFI 112
