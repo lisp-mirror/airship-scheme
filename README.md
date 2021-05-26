@@ -4,6 +4,13 @@ Airship Scheme
 A new r7rs Scheme implementation, designed to run within a Common Lisp
 environment.
 
+On IRC
+------
+
+Airship Scheme now is on IRC! This project uses
+[`irc.libera.chat`](https://libera.chat/) as its IRC network. The main
+channel is `#airship`, but `#scheme` and `#lisp` also might be useful.
+
 About the name
 --------------
 
