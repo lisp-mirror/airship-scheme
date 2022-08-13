@@ -8,6 +8,6 @@
   (:import-from #-sbcl #:babel #+sbcl #:sb-ext
                 #:string-to-octets
                 #:octets-to-string)
-  (:export #:scheme-read)
+  (:export #:read-scheme)
   (:local-nicknames (:a :alexandria)
                     (:f :float-features)))
