@@ -247,6 +247,6 @@ This is used for literal infinities in the Scheme reader.
   "Converts a number to a Scheme exact."
   (etypecase z
     ((and complex inexact?) (complex (rationalize (realpart z))
-                                    (rationalize (imagpart z))))
+                                     (rationalize (imagpart z))))
     (inexact? (rationalize z))
     (number z)))
