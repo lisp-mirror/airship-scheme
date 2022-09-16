@@ -185,9 +185,10 @@ separator).
       (invalid-infnan-error)))
 
 ;;; Reads the exponent of a NaN or infinite flonum.
-(defun read-exponent* (stream &optional unread-if-no-match?)
+(defun read-exponent* (exact? unread-if-no-match? stream)
   (read-case (stream exponent-char)
-    ((:or #\e #\E #\d #\D) 'double-float)
+    ((:or #\e #\E) (if exact? 'integer 'double-float))
+    ((:or #\d #\D) 'double-float)
     ((:or #\f #\F) 'single-float)
     ((:or #\l #\L) 'long-float)
     ((:or #\s #\S) 'short-float)
@@ -232,7 +233,7 @@ separator).
               ((and first? (complex-number-separator? next-char))
                (nan 'double-float negate?))
               (t
-               (%read-final-char (nan (read-exponent* stream) negate?) stream first?)))))))
+               (%read-final-char (nan (read-exponent* nil nil stream) negate?) stream first?)))))))
 
 ;;; Reads an inf candidate, either as a trivial imaginary number, a
 ;;; floating point infinity, or as an identifier.
@@ -273,7 +274,7 @@ separator).
                   ((and first? (complex-number-separator? next-char))
                    (inf 'double-float negate?))
                   (t
-                   (%read-final-char (inf (read-exponent* stream) negate?) stream first?))))))))
+                   (%read-final-char (inf (read-exponent* nil nil stream) negate?) stream first?))))))))
 
 ;;; Reads a numeric sign if present.
 (defun %read-sign (stream)
@@ -292,25 +293,32 @@ separator).
 
 ;;; Reads the exponent part of a flonum, after the exponent character
 ;;; is read.
-(defun %read-exponent (number radix stream float-type)
+(defun %read-exponent (number radix float-type stream)
   (check-flonum-radix radix)
   (let ((sign (%sign (%read-sign stream))))
     (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
       (error-when (zerop length*)
                   'scheme-reader-error
                   :details "An exponent was expected but none was provided")
-      (* (coerce number float-type)
+      (* (if float-type
+             (coerce number float-type)
+             number)
          (expt +flonum-base+ (* number* sign))))))
 
 ;;; Reads the exponent of a flonum.
-(defun read-exponent (number radix stream)
-  (let ((float-type (read-exponent* stream t)))
+(defun read-exponent (number radix exact? stream)
+  (let ((float-type (read-exponent* exact? t stream)))
     (if float-type
-        (%read-exponent number radix stream float-type)
+        (%read-exponent number
+                        radix
+                        (if (eql float-type 'integer)
+                            nil
+                            float-type)
+                        stream)
         number)))
 
 ;;; Reads a possible suffix for a number.
-(defun %read-scheme-number-suffix (number radix stream)
+(defun %read-scheme-number-suffix (number radix exact? stream)
   (read-case (stream match)
     (#\/
      (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
@@ -322,14 +330,14 @@ separator).
      (check-flonum-radix radix)
      (multiple-value-bind (number* length*) (read-scheme-integer stream radix)
        (let ((number (+ number (/ number* (expt (double-float* +flonum-base+) length*)))))
-         (read-exponent number radix stream))))
+         (read-exponent number radix exact? stream))))
     (:eof number)
     (t
      (unread-char match stream)
-     (read-exponent number radix stream))))
+     (read-exponent number radix exact? stream))))
 
 ;;; Reads a number that isn't a NaN or infinity.
-(defun %read-regular-scheme-number (radix sign-prefix stream)
+(defun %read-regular-scheme-number (radix sign-prefix exact? stream)
   (multiple-value-bind (number length) (read-scheme-integer stream radix)
     ;; A leading decimal point implicitly has a 0 in front.
     ;; Otherwise, no number at the start is an error.
@@ -344,10 +352,10 @@ separator).
            (number (* sign
                       (if (%delimiter? stream)
                           number
-                          (%read-scheme-number-suffix number radix stream)))))
+                          (%read-scheme-number-suffix number radix exact? stream)))))
       number)))
 
-(defun %read-infnan-or-regular-number (first? next-char radix sign-prefix stream no-symbol?)
+(defun %read-infnan-or-regular-number (first? next-char radix sign-prefix stream no-symbol? exact?)
   (cond ((and sign-prefix (char-equal next-char #\n))
          ;; Reads NaN or a symbol.
          (%read-nan sign-prefix stream no-symbol? first?))
@@ -357,7 +365,7 @@ separator).
         ((or (digit-char-p next-char radix)
              (eql next-char #\.))
          ;; Reads a number like 4 or .4
-         (%read-regular-scheme-number radix sign-prefix stream))
+         (%read-regular-scheme-number radix sign-prefix exact? stream))
         ;; For symbols that begin with + or -, such as
         ;; CL-style constant names, e.g. +foo+, excluding +
         ;; or - themselves (the first case in the COND).
@@ -387,7 +395,7 @@ separator).
 ;;;
 ;;; Note: This extends the syntax by permitting an imaginary number to
 ;;; exist without a sign prefix in certain cases, e.g. "4i".
-(defun %read-scheme-number (stream radix &optional no-symbol?)
+(defun %read-scheme-number (stream radix &optional no-symbol? exact?)
   ;; A complex number has two different ways to have a second part:
   ;;
   ;;   {first}+{second}i or {first}-{second}i
@@ -397,7 +405,7 @@ separator).
                  (next-char (peek-char* stream)))
              (if (delimiter? next-char)
                  (intern (string sign-prefix))
-                 (%read-infnan-or-regular-number t next-char radix sign-prefix stream no-symbol?))))
+                 (%read-infnan-or-regular-number t next-char radix sign-prefix stream no-symbol? exact?))))
          ;; Note: Ending in a delimiter means there is no second part.
          ;; Ending in an #\i means that the "first" part was really
          ;; the second part.
@@ -416,14 +424,14 @@ separator).
                       (#\@
                        (let* ((sign-prefix* (%read-sign stream))
                               (next-char (peek-char* stream))
-                              (number* (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream t)))
+                              (number* (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream t exact?)))
                          (f:with-float-traps-masked t
                            (* (if (rationalp number) (double-float* number) number)
                               (cis (if (rationalp number) (double-float* number*) number*))))))
                       ((:or #\+ #\-)
                        (let* ((sign-prefix* match)
                               (next-char (peek-char* stream))
-                              (number* (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream t)))
+                              (number* (%read-infnan-or-regular-number nil next-char radix sign-prefix* stream t exact?)))
                          (f:with-float-traps-masked t
                            (read-case (stream match)
                              ((:or #\i #\I)
@@ -595,12 +603,16 @@ separator).
 ;;; inexact (float).
 (defun %read-in-base (stream base)
   (let* ((next-char (peek-char* stream))
+         (exact? nil)
          (exactness (case next-char
                       (#\#
                        (skip-read-char stream)
                        (read-case (stream match)
-                         ((:or #\e #\E) #'exact)
-                         ((:or #\i #\I) #'inexact)
+                         ((:or #\e #\E)
+                          (setf exact? t)
+                          #'exact)
+                         ((:or #\i #\I)
+                          #'inexact)
                          (:eof (eof-error "after # when either E or I was expected"))
                          (t (error 'scheme-reader-error
                                    :details (format nil "#~A is not an exactness/inexactness" match)))))
@@ -608,7 +620,7 @@ separator).
                        (eof-error "when a number was expected"))
                       (t
                        nil)))
-         (number (%read-scheme-number stream base t)))
+         (number (%read-scheme-number stream base t exact?)))
     (if exactness
         (funcall exactness number)
         number)))
@@ -672,7 +684,7 @@ separator).
   (read-case (stream x)
     ((:or #\e #\E)
      (let ((read-base (%find-read-base stream radix)))
-       (exact (%read-scheme-number stream read-base t))))
+       (exact (%read-scheme-number stream read-base t t))))
     ((:or #\i #\I)
      (let ((read-base (%find-read-base stream radix)))
        (inexact (%read-scheme-number stream read-base t))))
