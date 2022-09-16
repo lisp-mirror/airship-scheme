@@ -269,7 +269,10 @@
   (is (eql (read-scheme* "#e#x1a") 26))
   (is (eql (read-scheme* "#x#e93fc3a") 9698362))
   (is (eql (read-scheme* "#i#o4321") 2257.0d0))
-  (is (eql (read-scheme* "#b#i1110101010100001") 60065.0d0)))
+  (is (eql (read-scheme* "#b#i1110101010100001") 60065.0d0))
+  (is (eql (read-scheme* "#e1e500") (expt 10 500)))
+  (is (eql (read-scheme* "#e#d1e500") (expt 10 500)))
+  (is (eql (read-scheme* "#d#e1e500") (expt 10 500))))
 
 (5am:test read-symbols
   "Are symbols read correctly?"
