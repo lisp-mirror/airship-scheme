@@ -28,7 +28,8 @@
                (:file "scheme-write")
                (:file "scheme-read")
                (:file "standard-procedures")
-               (:file "extra-procedures"))
+               (:file "extra-procedures")
+               (:file "cl-macros"))
   :in-order-to ((asdf:test-op (asdf:test-op "airship-scheme/tests"))))
 
 (asdf:defsystem #:airship-scheme/tests
