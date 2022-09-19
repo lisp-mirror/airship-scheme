@@ -13,8 +13,6 @@
   :bug-tracker "https://gitlab.com/mbabich/airship-scheme/issues"
   :source-control (:git "https://gitlab.com/mbabich/airship-scheme.git")
   :depends-on (:alexandria
-               #-sbcl
-               :babel
                :float-features
                :trivial-features
                :zr-utils)
