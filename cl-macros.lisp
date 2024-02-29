@@ -1,4 +1,4 @@
-(cl:in-package #:airship-scheme)
+(in-package #:airship-scheme)
 
 ;;;; This file implements Common Lisp macro equivalents for macros or
 ;;;; special forms that only exist inside of Scheme. This is because

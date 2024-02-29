@@ -1,6 +1,6 @@
 ;;;; -*- mode: common-lisp; -*-
 
-(cl:defpackage #:airship-scheme
+(defpackage #:airship-scheme
   (:use #:cl
         #:zr-utils)
   ;; Uses a fast, implementation-specific version if available and

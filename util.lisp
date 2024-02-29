@@ -1,6 +1,6 @@
 ;;;; -*- mode: common-lisp; -*-
 
-(cl:in-package #:airship-scheme)
+(in-package #:airship-scheme)
 
 (define-function (make-adjustable-string :inline t) (&optional (length 16))
   "Creates an adjustable string of the given initial length."

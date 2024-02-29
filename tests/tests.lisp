@@ -1,6 +1,6 @@
 ;;;; -*- mode: common-lisp; -*-
 
-(cl:in-package #:airship-scheme/tests)
+(in-package #:airship-scheme/tests)
 
 (defun read-scheme* (string)
   (with-input-from-string (stream string)

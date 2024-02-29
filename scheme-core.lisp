@@ -4,11 +4,25 @@
 
 (defpackage #:r7rs
   (:documentation "A package that the core R7RS symbols are read into.")
-  (:use))
+  (:use)
+  ;; Imported to avoid various problems
+  (:import-from #:cl
+                #:defpackage
+                #:function
+                #:in-package
+                #:nil
+                #:quote))
 
 (defpackage #:%scheme-thunk
   (:documentation "A package to namespace the internal Scheme thunk.")
   (:use)
+  ;; Imported to avoid various problems
+  (:import-from #:cl
+                #:defpackage
+                #:function
+                #:in-package
+                #:nil
+                #:quote)
   (:export #:thunk))
 
 (defun generate-lambda-list (list)

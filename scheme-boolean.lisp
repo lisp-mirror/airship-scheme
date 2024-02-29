@@ -9,9 +9,17 @@
 ;;;; There should be effectively no performance loss comparing to this
 ;;;; 'f instead of cl:nil.
 
-(cl:defpackage #:%scheme-boolean
+(defpackage #:%scheme-boolean
   (:use)
-  (:import-from #:cl #:t)
+  (:import-from #:cl
+                ;; Imported to avoid various problems
+                #:defpackage
+                #:function
+                #:in-package
+                #:nil
+                #:quote
+                ;; Actually used (reexported)
+                #:t)
   (:export #:t #:f))
 
 (defconstant %scheme-boolean:f '%scheme-boolean:f)

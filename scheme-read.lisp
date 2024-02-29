@@ -5,7 +5,7 @@
 ;;; have to be renamed to avoid confusion with reading the actual
 ;;; keywords :SKIP and :EOF.
 
-(cl:in-package #:airship-scheme)
+(in-package #:airship-scheme)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant +read-base+ 10

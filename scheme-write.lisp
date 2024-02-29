@@ -1,6 +1,6 @@
 ;;;; -*- mode: common-lisp; -*-
 
-(cl:in-package #:airship-scheme)
+(in-package #:airship-scheme)
 
 ;;; Note: ignores short-float and long-float in SBCL to avoid having
 ;;; an unreachable code note.
