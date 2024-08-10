@@ -55,6 +55,32 @@ few decades, making some of the assumptions of past approaches no
 longer viable. There are also syntactic incompatibilities, meaning
 that a fully conforming Scheme cannot simply use the host CL's reader.
 
+Status
+------
+
+This project depends on sharing a large amount of code initially
+written for a Common Lisp first person 3D game engine called Zombie
+Raptor. Parts of that effort were spun off into the `zr-utils` utility
+library, which is a work in progress library with an unstable API. In
+fact, that library was spun off precisely to be used as a shared
+dependency between the game engine and this project. All of these are
+still incomplete.
+
+As of 2024, most of the recent work towards this project has been
+written as general purpose programming language internals instead of
+happening directly in this repository. In particular, there's also a
+vector and shader language, ZRVL, which is of more direct importance
+to the game engine. The smaller scope of this other language means
+that it is a more suitable place to develop the shared internals of
+programming languages that target Common Lisp implementations as a CPU
+runtime. Additionally, ZRVL will also target SPIR-V to be used for
+graphics shaders, but the semantics of Scheme would make it
+challenging to do so without subsetting the language.
+
+Work on this project will resume when the internals of ZRVL are spun
+off as a useful intermediate representation that Airship Scheme can
+also benefit from.
+
 Why use this project?
 ---------------------
 
