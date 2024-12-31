@@ -111,10 +111,8 @@ SATISFIES type, it should be used sparingly.
 A zero? is any way to represent zero, real or complex. A complex zero
 can exist if floating point.
 "
-  ;; Note: (complex (float 0 0)) might also work instead of (complex
-  ;; (real 0 0))
   `(or (real 0 0)
-       (complex (real 0 0))))
+       (complex (float 0 0))))
 
 ;;;; Other types
 
