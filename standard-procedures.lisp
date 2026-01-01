@@ -370,9 +370,10 @@
   (member obj list :test #'eqv?))
 
 (define-scheme-predicate (member obj list &optional compare)
-  (member obj list :test (or #'equal?
+  (member obj list :test (if compare
                              (lambda (x y)
-                               (false-to-nil (funcall compare x y))))))
+                               (false-to-nil (funcall compare x y)))
+                             #'equal?)))
 
 (define-scheme-predicate (assq obj alist)
   (assoc obj alist :test #'eq))
@@ -381,9 +382,10 @@
   (assoc obj alist :test #'eqv?))
 
 (define-scheme-predicate (assoc obj alist &optional compare)
-  (assoc obj alist :test (or #'equal?
+  (assoc obj alist :test (if compare
                              (lambda (x y)
-                               (false-to-nil (funcall compare x y))))))
+                               (false-to-nil (funcall compare x y)))
+                             #'equal?)))
 
 (define-scheme-procedure (list-copy obj)
   (copy-list obj))
@@ -635,7 +637,7 @@
   (replace to from :start1 at :start2 start :end2 end))
 
 (define-scheme-procedure (bytevector-append . bytevector)
-  (apply #'concatenate 'bytevector bytevector))
+  (apply #'concatenate 'bytevector? bytevector))
 
 (define-scheme-procedure (utf8->string bytevector &optional (start 0) end)
   (check-type bytevector bytevector?)
