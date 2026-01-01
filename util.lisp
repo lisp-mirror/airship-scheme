@@ -67,7 +67,7 @@ in a form that CL expects.
                     sequence)))
     (coerce subseq result-type)))
 
-(defun copy-seq-or-subseq (sequence &optional start end)
+(define-function (copy-seq-or-subseq :inline t) (sequence &optional start end)
   "Either copies a subsequence or a sequence"
   (if start
       (subseq sequence start end)
